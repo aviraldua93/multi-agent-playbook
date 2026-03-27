@@ -5,6 +5,14 @@
 [![Conductor Issues Filed](https://img.shields.io/badge/Conductor_Issues_Filed-3-blue)](https://github.com/microsoft/conductor/issues?q=author%3Aaviraldua93)
 [![Claude Code Reference](https://img.shields.io/badge/Claude_Code_Issue-4182-purple)](https://github.com/anthropics/claude-code/issues/4182)
 
+### Case Study: [AgentOS Dashboard](https://github.com/aviraldua93/agentos) — built by AI agents
+
+![AgentOS Dashboard](screenshots/dashboard.png)
+
+### Conductor Workflow — 13 agents orchestrated by YAML
+
+![Conductor DAG](screenshots/conductor-dag.png)
+
 ---
 
 ## The Experiment
