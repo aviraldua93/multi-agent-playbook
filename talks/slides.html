@@ -1709,39 +1709,64 @@
     </div>
   </div>
 
-  <!-- ── SLIDE 16: KEY TAKEAWAYS ── -->
-  <div class="slide" data-notes="Slow down. These are the insights worth remembering. Each one came from a real failure. Let each point land.">
-    <div class="tag">Takeaway</div>
-    <div class="big"><span>Three Rules</span></div>
+  <!-- ── WHERE THE INDUSTRY IS HEADING ── -->
+  <div class="slide" data-notes="The future: Agent Teams. Teammates message each other directly. Shared task list. Self-coordination. Sub-agents become persistent services. Claude Code has this experimentally. The evolution: one-shot functions → persistent services → autonomous coordination.">
+    <div class="medium" style="margin-top:0; margin-bottom:20px;">Where the Industry Is <span style="color:var(--cyan);">Heading</span></div>
 
-    <div style="margin-top:40px; display:flex; flex-direction:column; gap:28px; max-width:700px; width:100%;">
-      <div style="display:flex; gap:20px; align-items:center;">
-        <span style="font-size:2rem;">🧠</span>
-        <div>
-          <div style="font-size:1.1rem; font-weight:700;">Context is RAM, not disk</div>
-          <div style="font-size:0.85rem; color:var(--dim); margin-top:2px;">Finite. Precious. Don't overload agents.</div>
+    <div style="display:flex; gap:12px; justify-content:center; align-items:stretch; margin-top:16px; max-width:800px;">
+      <!-- Sub-agents (today) -->
+      <div style="flex:1; background:var(--card); border:1px solid var(--border); border-top:3px solid var(--red); border-radius:14px; padding:18px; text-align:center;">
+        <div style="font-size:1.4rem; margin-bottom:6px;">⚡</div>
+        <div style="font-size:0.9rem; font-weight:700; color:var(--red); margin-bottom:8px;">Sub-Agents</div>
+        <div style="font-size:0.72rem; color:var(--dim); line-height:1.6;">
+          One-shot functions<br>
+          Report to orchestrator only<br>
+          Can't talk to peers<br>
+          Die after one turn
         </div>
+        <div style="font-size:0.65rem; color:var(--muted); margin-top:8px;">Today</div>
       </div>
-      <div style="display:flex; gap:20px; align-items:center;">
-        <span style="font-size:2rem;">📄</span>
-        <div>
-          <div style="font-size:1.1rem; font-weight:700;">The repo is the shared memory</div>
-          <div style="font-size:0.85rem; color:var(--dim); margin-top:2px;">Agents can't remember. Files can. Docs-as-message-bus.</div>
+
+      <div style="display:flex; align-items:center; font-size:1.5rem; color:var(--muted);">→</div>
+
+      <!-- Agent Teams (emerging) -->
+      <div style="flex:1; background:var(--card); border:1px solid rgba(57,210,192,0.3); border-top:3px solid var(--cyan); border-radius:14px; padding:18px; text-align:center; box-shadow:0 0 12px rgba(57,210,192,0.1);">
+        <div style="font-size:1.4rem; margin-bottom:6px;">🤝</div>
+        <div style="font-size:0.9rem; font-weight:700; color:var(--cyan); margin-bottom:8px;">Agent Teams</div>
+        <div style="font-size:0.72rem; color:var(--dim); line-height:1.6;">
+          Persistent services<br>
+          Direct peer messaging<br>
+          Shared task list<br>
+          Self-coordination
         </div>
+        <div style="font-size:0.65rem; color:var(--cyan); margin-top:8px;">Claude Code (experimental)</div>
       </div>
-      <div style="display:flex; gap:20px; align-items:center;">
-        <span style="font-size:2rem;">⚡</span>
-        <div>
-          <div style="font-size:1.1rem; font-weight:700;">Don't anthropomorphize agents</div>
-          <div style="font-size:0.85rem; color:var(--dim); margin-top:2px;">They're stateless functions with good UX. Design for that.</div>
+
+      <div style="display:flex; align-items:center; font-size:1.5rem; color:var(--muted);">→</div>
+
+      <!-- Autonomous (future) -->
+      <div style="flex:1; background:var(--card); border:1px dashed var(--purple); border-top:3px solid var(--purple); border-radius:14px; padding:18px; text-align:center;">
+        <div style="font-size:1.4rem; margin-bottom:6px;">🌐</div>
+        <div style="font-size:0.9rem; font-weight:700; color:var(--purple); margin-bottom:8px;">Autonomous</div>
+        <div style="font-size:0.72rem; color:var(--dim); line-height:1.6;">
+          Self-organizing teams<br>
+          Dynamic spawning<br>
+          No human orchestrator<br>
+          ???
         </div>
+        <div style="font-size:0.65rem; color:var(--muted); margin-top:8px;">Future</div>
       </div>
     </div>
 
-    <div style="margin-top:48px; max-width:700px; text-align:center; font-size:1.3rem; font-style:italic; color:var(--dim); line-height:1.5;">
+    <p style="margin-top:16px; font-size:0.85rem; color:var(--dim);">The difference? Who keeps talking to the agent. Sub-agents die because nobody follows up.</p>
+  </div>
+
+  <!-- ── CLOSING ── -->
+  <div class="slide" data-notes="Let the quote sit. Pause. Say thank you. That's it.">
+    <div style="max-width:700px; text-align:center; font-size:2.2rem; font-style:italic; color:var(--text); line-height:1.5;">
       "Agents are not employees.<br>They're functions that happen to speak English."
     </div>
-    <p style="margin-top:24px; font-size:0.85rem; color:var(--muted); text-align:center;">Thank you · <span style="color:var(--cyan);">github.com/aviraldua93</span></p>
+    <p style="margin-top:48px; font-size:0.95rem; color:var(--muted); text-align:center;">Thank you</p>
   </div>
 
 </div><!-- /deck -->
