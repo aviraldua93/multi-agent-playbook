@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lessons from Multi-Agent AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+
+  /* ── Theme: GitHub Dark ── */
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --green: #3fb950;
+    --orange: #f0883e;
+    --red: #f85149;
+    --cyan: #39d2c0;
+    --text: #e6edf3;
+    --dim: #8b949e;
+    --muted: #6e7681;
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ── Deck / Slide architecture (index-v3 pattern) ── */
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center;
+    padding: 60px 100px;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    transform: scale(0.97);
+  }
+  .slide.active {
+    opacity: 1; visibility: visible;
+    transform: scale(1);
+  }
+
+  /* ── Progress bar: cyan→purple gradient ── */
+  .progress {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--cyan), var(--purple));
+    transition: width 0.3s; z-index: 999;
+  }
+
+  /* ── Slide counter ── */
+  .counter {
+    position: fixed; bottom: 20px; right: 28px;
+    font: 13px 'Fira Code', monospace;
+    color: var(--muted); z-index: 999;
+  }
+
+  /* ── Typography ── */
+  .big {
+    font-size: clamp(2rem, 5vw, 3.8rem);
+    font-weight: 700; line-height: 1.1;
+    text-align: center;
+  }
+  .big span, .gradient-text {
+    background: linear-gradient(135deg, var(--cyan), var(--blue), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .medium {
+    font-size: clamp(1.2rem, 2.5vw, 2rem);
+    font-weight: 600; text-align: center;
+    line-height: 1.3; margin-top: 32px;
+  }
+  .small {
+    font-size: clamp(0.85rem, 1.3vw, 1.15rem);
+    color: var(--dim); text-align: center;
+    max-width: 600px; line-height: 1.6;
+  }
+  .tag {
+    font-size: 0.85rem; color: var(--blue);
+    letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  /* ── Conversation bubbles ── */
+  .convo { display: flex; flex-direction: column; gap: 16px; max-width: 700px; width: 100%; }
+  .msg {
+    padding: 16px 22px; border-radius: 18px;
+    font-size: clamp(0.9rem, 1.2vw, 1.15rem);
+    line-height: 1.5; max-width: 85%;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.5s var(--ease-out-expo), transform 0.5s var(--ease-out-expo);
+  }
+  .slide.active .msg { opacity: 1; transform: translateY(0); }
+  .slide.active .msg:nth-child(1) { transition-delay: 0.3s; }
+  .slide.active .msg:nth-child(2) { transition-delay: 0.8s; }
+  .slide.active .msg:nth-child(3) { transition-delay: 1.3s; }
+  .slide.active .msg:nth-child(4) { transition-delay: 1.8s; }
+  .msg-me {
+    align-self: flex-end;
+    background: rgba(88,166,255,0.12);
+    border: 1px solid rgba(88,166,255,0.3);
+    border-bottom-right-radius: 4px;
+  }
+  .msg-ai {
+    align-self: flex-start;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--dim);
+  }
+  .msg-label {
+    font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 700; margin-bottom: 6px;
+  }
+  .msg-me .msg-label { color: var(--blue); }
+  .msg-ai .msg-label { color: var(--purple); }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .flow-node {
+    border: 2px solid var(--border);
+    border-radius: 14px; padding: 18px 28px;
+    text-align: center; position: relative;
+    transition: all 0.6s var(--ease-out-expo);
+  }
+  .flow-node .label {
+    font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 4px;
+  }
+  .flow-node .name { font-size: 1.05rem; font-weight: 600; }
+  .flow-arrow { font-size: 1.6rem; color: var(--muted); }
+  .fn-blue { border-color: var(--blue); }
+  .fn-blue .label { color: var(--blue); }
+  .fn-purple { border-color: var(--purple); }
+  .fn-purple .label { color: var(--purple); }
+  .fn-green { border-color: var(--green); }
+  .fn-green .label { color: var(--green); }
+  .fn-orange { border-color: var(--orange); }
+  .fn-orange .label { color: var(--orange); }
+  .fn-cyan { border-color: var(--cyan); }
+  .fn-cyan .label { color: var(--cyan); }
+  .fn-red { border-color: var(--red); }
+  .fn-red .label { color: var(--red); }
+
+  /* Sequential flow lighting animation */
+  .flow-sequential .flow-node {
+    opacity: 0.3; transform: scale(0.95);
+    transition: all 0.5s var(--ease-out-expo);
+  }
+  .slide.active .flow-sequential .flow-node { opacity: 1; transform: scale(1); }
+  .slide.active .flow-sequential .flow-node:nth-child(1) { transition-delay: 0.2s; }
+  .slide.active .flow-sequential .flow-node:nth-child(2) { transition-delay: 0.4s; }
+  .slide.active .flow-sequential .flow-node:nth-child(3) { transition-delay: 0.5s; }
+  .slide.active .flow-sequential .flow-node:nth-child(4) { transition-delay: 0.6s; }
+  .slide.active .flow-sequential .flow-node:nth-child(5) { transition-delay: 0.7s; }
+  .slide.active .flow-sequential .flow-node:nth-child(6) { transition-delay: 0.8s; }
+  .slide.active .flow-sequential .flow-node:nth-child(7) { transition-delay: 0.9s; }
+  .slide.active .flow-sequential .flow-node:nth-child(8) { transition-delay: 1.0s; }
+  .slide.active .flow-sequential .flow-node:nth-child(9) { transition-delay: 1.1s; }
+  .slide.active .flow-sequential .flow-node:nth-child(10) { transition-delay: 1.2s; }
+  .slide.active .flow-sequential .flow-node:nth-child(11) { transition-delay: 1.3s; }
+  .slide.active .flow-sequential .flow-arrow { opacity: 0.3; }
+  .slide.active .flow-sequential .flow-arrow { opacity: 1; transition: opacity 0.4s ease; }
+  .slide.active .flow-sequential .flow-arrow:nth-child(2) { transition-delay: 0.35s; }
+  .slide.active .flow-sequential .flow-arrow:nth-child(4) { transition-delay: 0.55s; }
+  .slide.active .flow-sequential .flow-arrow:nth-child(6) { transition-delay: 0.65s; }
+  .slide.active .flow-sequential .flow-arrow:nth-child(8) { transition-delay: 0.75s; }
+  .slide.active .flow-sequential .flow-arrow:nth-child(10) { transition-delay: 0.85s; }
+
+  /* ── Stats row ── */
+  .stats { display: flex; gap: 32px; margin-top: 40px; flex-wrap: wrap; justify-content: center; }
+  .stat { text-align: center; }
+  .stat-num { font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1; }
+  .stat-lbl { font-size: 0.85rem; color: var(--dim); margin-top: 4px; }
+
+  /* ── Swarm dots ── */
+  .swarm { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 500px; margin: 24px auto; }
+  .dot {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700;
+    border: 2px solid;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  .dot:nth-child(odd) { animation-delay: 0.7s; }
+  .dot:nth-child(3n) { animation-delay: 1.4s; }
+  @keyframes pulse {
+    0%,100% { opacity:0.6; transform:scale(1); }
+    50% { opacity:1; transform:scale(1.1); }
+  }
+  .d-bl { border-color:var(--blue); color:var(--blue); background:rgba(88,166,255,0.08); }
+  .d-pu { border-color:var(--purple); color:var(--purple); background:rgba(188,140,255,0.08); }
+  .d-gr { border-color:var(--green); color:var(--green); background:rgba(63,185,80,0.08); }
+  .d-or { border-color:var(--orange); color:var(--orange); background:rgba(240,136,62,0.08); }
+  .d-cy { border-color:var(--cyan); color:var(--cyan); background:rgba(57,210,192,0.08); }
+  .d-re { border-color:var(--red); color:var(--red); background:rgba(248,81,73,0.08); }
+
+  /* ── Code block ── */
+  .code {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    font: clamp(0.85rem, 1.1vw, 1.05rem)/1.9 'Fira Code', monospace;
+    max-width: 600px; width: 100%;
+    text-align: left;
+  }
+  .code .g { color: var(--green); }
+  .code .p { color: var(--purple); }
+  .code .o { color: var(--orange); }
+  .code .b { color: var(--blue); }
+  .code .c { color: var(--muted); font-style: italic; }
+  .code .cy { color: var(--cyan); }
+  .code .r { color: var(--red); }
+
+  /* ── Two columns ── */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; max-width: 900px; width: 100%; }
+
+  /* ── Click-to-reveal ── */
+  .reveal-click {
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.6s var(--ease-out-expo), transform 0.6s var(--ease-out-expo);
+    cursor: pointer; pointer-events: none;
+  }
+  .reveal-click.revealed {
+    opacity: 1; transform: translateY(0); pointer-events: auto;
+  }
+  .reveal-trigger {
+    margin-top: 32px; font-size: 0.8rem; color: var(--muted);
+    cursor: pointer; text-align: center;
+    animation: subtlePulse 2s ease-in-out infinite;
+  }
+  .reveal-trigger.hidden { display: none; }
+  @keyframes subtlePulse {
+    0%,100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  /* ── LIVE DEMO badge ── */
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(248,81,73,0.12);
+    border: 1px solid rgba(248,81,73,0.4);
+    border-radius: 20px; padding: 6px 16px;
+    font-size: 0.75rem; font-weight: 700;
+    color: var(--red); letter-spacing: 1px;
+    text-transform: uppercase; margin-top: 24px;
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red);
+    animation: livePulse 1.5s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── Particle background (title slide) ── */
+  .particles {
+    position: absolute; inset: 0; overflow: hidden; z-index: 0;
+  }
+  .particles::before, .particles::after {
+    content: '';
+    position: absolute;
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    animation: floatParticles 20s linear infinite;
+  }
+  .particles::before {
+    box-shadow:
+      120px 80px 0 var(--blue), 340px 200px 0 var(--purple),
+      560px 120px 0 var(--cyan), 180px 400px 0 var(--blue),
+      720px 300px 0 var(--purple), 900px 150px 0 var(--green),
+      50px 550px 0 var(--cyan), 400px 480px 0 var(--blue),
+      650px 520px 0 var(--purple), 1100px 200px 0 var(--cyan),
+      250px 650px 0 var(--green), 800px 450px 0 var(--blue),
+      1000px 380px 0 var(--purple), 150px 300px 0 var(--cyan),
+      500px 600px 0 var(--blue), 1200px 500px 0 var(--green),
+      350px 100px 0 var(--purple), 950px 550px 0 var(--cyan),
+      70px 200px 0 var(--blue), 1350px 300px 0 var(--purple);
+    opacity: 0.4;
+  }
+  .particles::after {
+    box-shadow:
+      200px 150px 0 var(--cyan), 450px 350px 0 var(--blue),
+      700px 50px 0 var(--purple), 100px 480px 0 var(--green),
+      850px 250px 0 var(--cyan), 1050px 100px 0 var(--blue),
+      300px 550px 0 var(--purple), 550px 400px 0 var(--cyan),
+      1200px 350px 0 var(--green), 670px 600px 0 var(--blue),
+      420px 250px 0 var(--purple), 900px 480px 0 var(--cyan),
+      1100px 550px 0 var(--blue), 230px 100px 0 var(--green),
+      780px 180px 0 var(--purple), 1300px 420px 0 var(--cyan);
+    opacity: 0.25;
+    animation-delay: -10s;
+    animation-duration: 25s;
+  }
+  @keyframes floatParticles {
+    0% { transform: translateY(0) translateX(0); }
+    25% { transform: translateY(-30px) translateX(20px); }
+    50% { transform: translateY(-10px) translateX(-15px); }
+    75% { transform: translateY(-40px) translateX(10px); }
+    100% { transform: translateY(0) translateX(0); }
+  }
+
+  /* ── Typewriter ── */
+  .typewriter {
+    overflow: hidden; white-space: nowrap;
+    border-right: 3px solid var(--cyan);
+    width: 0;
+    animation: typeExpand 2.5s var(--ease-out-expo) forwards,
+               blinkCaret 0.7s step-end infinite;
+  }
+  .slide.active .typewriter { animation-play-state: running; }
+  .slide:not(.active) .typewriter { width: 0; animation-play-state: paused; }
+  @keyframes typeExpand {
+    0% { width: 0; }
+    100% { width: 100%; }
+  }
+  @keyframes blinkCaret {
+    0%,100% { border-color: var(--cyan); }
+    50% { border-color: transparent; }
+  }
+
+  /* ── Flip cards ── */
+  .flip-row { display: flex; gap: 24px; margin-top: 40px; perspective: 1000px; flex-wrap: wrap; justify-content: center; }
+  .flip-card {
+    width: 220px; height: 140px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s var(--ease-out-expo);
+    cursor: pointer;
+  }
+  .flip-card:hover { transform: rotateY(180deg); }
+  .flip-face {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: 14px; padding: 20px;
+    backface-visibility: hidden;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .flip-front { background: var(--card); }
+  .flip-back {
+    background: var(--card);
+    transform: rotateY(180deg);
+    border-color: var(--cyan);
+  }
+  .flip-emoji { font-size: 2rem; margin-bottom: 8px; }
+  .flip-text { font-size: 0.9rem; font-weight: 600; }
+  .flip-back .flip-text { color: var(--cyan); font-size: 0.85rem; }
+
+  /* ── Stagger reveal ── */
+  .stagger-item {
+    opacity: 0; transform: translateX(-20px);
+    transition: opacity 0.5s var(--ease-out-expo), transform 0.5s var(--ease-out-expo);
+  }
+  .slide.active .stagger-item { opacity: 1; transform: translateX(0); }
+  .slide.active .stagger-item:nth-child(1) { transition-delay: 0.3s; }
+  .slide.active .stagger-item:nth-child(2) { transition-delay: 0.6s; }
+  .slide.active .stagger-item:nth-child(3) { transition-delay: 0.9s; }
+  .slide.active .stagger-item:nth-child(4) { transition-delay: 1.2s; }
+
+  /* ── Medium fade-in after typewriter ── */
+  .fade-after-type {
+    opacity: 0; transform: translateY(12px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .slide.active .fade-after-type {
+    opacity: 1; transform: translateY(0);
+    transition-delay: 3s;
+  }
+
+  /* ── Issue items ── */
+  .issue-list { display: flex; flex-direction: column; gap: 16px; max-width: 600px; width: 100%; margin-top: 32px; }
+  .issue-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px; border-radius: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    font-size: clamp(0.85rem, 1.2vw, 1rem);
+  }
+  .issue-dot { font-size: 1.2rem; flex-shrink: 0; }
+  .issue-ref { color: var(--muted); font-family: 'Fira Code', monospace; font-size: 0.85rem; margin-left: auto; }
+
+  /* ── Tags row ── */
+  .tags-row { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+  .tag-pill {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 16px;
+    font-size: 0.8rem; color: var(--dim);
+    font-family: 'Fira Code', monospace;
+  }
+
+  /* ── Two flow nodes side by side ── */
+  .side-by-side {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; max-width: 800px; width: 100%; margin-top: 32px;
+  }
+  .side-node {
+    border: 2px solid var(--border);
+    border-radius: 14px; padding: 24px 28px;
+    text-align: center;
+  }
+  .side-node .node-title {
+    font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;
+  }
+  .side-node .node-desc {
+    font-size: 0.95rem; color: var(--dim); line-height: 1.5;
+  }
+
+  /* ── Click-reveal lines ── */
+  .reveal-line {
+    opacity: 0; transform: translateY(10px);
+    transition: opacity 0.5s var(--ease-out-expo), transform 0.5s var(--ease-out-expo);
+    font-size: clamp(1rem, 1.8vw, 1.3rem);
+    text-align: center; margin-top: 16px;
+  }
+  .reveal-line.revealed { opacity: 1; transform: translateY(0); }
+
+  /* ── Conductor layout ── */
+  .conductor-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; max-width: 900px; width: 100%; margin-top: 32px; }
+  .conductor-flow { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .conductor-node {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--card);
+    font-size: 0.9rem; font-weight: 600;
+    opacity: 0.3; transition: opacity 0.4s ease, border-color 0.4s ease;
+    width: 160px; justify-content: center;
+  }
+  .slide.active .conductor-node { opacity: 1; }
+  .slide.active .conductor-flow .conductor-node:nth-child(1) { transition-delay: 0.2s; }
+  .slide.active .conductor-flow .conductor-node:nth-child(2) { transition-delay: 0.4s; }
+  .slide.active .conductor-flow .conductor-node:nth-child(3) { transition-delay: 0.5s; }
+  .slide.active .conductor-flow .conductor-node:nth-child(4) { transition-delay: 0.6s; }
+  .slide.active .conductor-flow .conductor-node:nth-child(5) { transition-delay: 0.7s; }
+  .slide.active .conductor-flow .conductor-node:nth-child(6) { transition-delay: 0.8s; }
+  .slide.active .conductor-flow .conductor-node:nth-child(7) { transition-delay: 0.9s; }
+  .conductor-arrow { color: var(--muted); font-size: 0.9rem; margin: -4px 0; }
+  .conductor-stats { display: flex; flex-direction: column; justify-content: center; gap: 20px; }
+  .conductor-stat { text-align: center; }
+  .conductor-stat .stat-num { font-size: clamp(2rem, 3.5vw, 2.8rem); }
+
+  /* ── Floating nav bar (glassmorphism) ── */
+  .nav-bar {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px;
+    background: rgba(22, 27, 34, 0.75);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(48, 54, 61, 0.6);
+    border-radius: 40px; z-index: 998;
+    opacity: 1; transition: opacity 0.4s ease;
+  }
+  .nav-bar.hidden { opacity: 0; pointer-events: none; }
+  .nav-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--card);
+    color: var(--text); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; transition: all 0.2s;
+  }
+  .nav-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .nav-dots { display: flex; gap: 6px; }
+  .nav-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); cursor: pointer;
+    transition: all 0.3s;
+  }
+  .nav-dot.active { background: var(--cyan); transform: scale(1.3); }
+  .nav-dot:hover { background: var(--blue); }
+
+  /* ── Speaker notes ── */
+  .speaker-notes {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(22, 27, 34, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 16px 32px; z-index: 1000;
+    font-size: 0.9rem; color: var(--dim);
+    line-height: 1.6;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+  .speaker-notes.visible { transform: translateY(0); }
+  .speaker-notes-label {
+    font-size: 0.7rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .notes { display: none; }
+
+  /* ── Green / orange / red color helpers ── */
+  .green { color: var(--green); }
+  .orange { color: var(--orange); }
+  .red { color: var(--red); }
+  .blue { color: var(--blue); }
+  .purple { color: var(--purple); }
+  .cyan { color: var(--cyan); }
+  .dimmed { color: var(--dim); }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .big { font-size: clamp(1.6rem, 5vw, 2.4rem); }
+    .medium { font-size: clamp(1rem, 2.5vw, 1.5rem); }
+    .slide { padding: 40px 24px; }
+    .cols, .side-by-side, .conductor-layout { grid-template-columns: 1fr; }
+    .stats { flex-wrap: wrap; gap: 20px; }
+    .flip-row { gap: 16px; }
+    .flip-card { width: 180px; height: 120px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.2s !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="prog"></div>
+<div class="counter" id="ctr"></div>
+
+<!-- ═══════════════════════════════════════════
+     FLOATING NAV BAR
+     ═══════════════════════════════════════════ -->
+<div class="nav-bar" id="navBar">
+  <button class="nav-btn" id="navPrev" aria-label="Previous slide">←</button>
+  <div class="nav-dots" id="navDots"></div>
+  <button class="nav-btn" id="navNext" aria-label="Next slide">→</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SPEAKER NOTES PANEL
+     ═══════════════════════════════════════════ -->
+<div class="speaker-notes" id="speakerNotes">
+  <div class="speaker-notes-label">Speaker Notes (N to toggle)</div>
+  <div id="speakerNotesContent"></div>
+</div>
+
+<div class="deck">
+
+  <!-- ═══════════════════════════════════════════
+       ACT 1: THE DREAM (slides 1-4)
+       ═══════════════════════════════════════════ -->
+
+  <!-- ── SLIDE 1: TITLE ── -->
+  <div class="slide active" data-notes="Welcome everyone. This is the story of what happened when I tried to run an entire software company using only AI agents. Spoiler: it both worked and spectacularly failed.">
+    <div class="particles"></div>
+    <div style="position:relative; z-index:1; display:flex; flex-direction:column; align-items:center;">
+      <div class="tag">ADX Share &amp; Learn Series</div>
+      <div class="big" style="margin-top:8px;">Lessons from<br><span>Multi-Agent AI</span></div>
+      <p class="small" style="margin-top:20px;">What happens when you push Copilot beyond single-agent</p>
+      <p style="margin-top:32px; color:var(--muted); font-size:0.95rem;">Aviral Dua · March 2026</p>
+      <div class="tags-row">
+        <span class="tag-pill">Copilot</span>
+        <span class="tag-pill">Multi-Agent</span>
+        <span class="tag-pill">Conductor</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 2: THE INSPIRATION ── -->
+  <div class="slide" data-notes="Credit Jaypete. His 'Corporation' project inspired me. I took the idea and pushed it further — multiple companies, deeper hierarchy. That's where the learning started.">
+    <div class="big">I wanted to push multi-agent <span>to its limits.</span></div>
+    <p class="small" style="margin-top:32px;">A company structure was the test case.<br>CEO, VPs, engineers — all AI agents.</p>
+  </div>
+
+  <!-- ── THE BUILDING BLOCKS ── -->
+  <div class="slide" data-notes="Three types in multi-agent: Agents (governed, persona file), Sub-agents (anonymous), and the Main Session (orchestrator — the only one that persists). Teach this before showing the org chart so the audience knows what the nodes represent.">
+    <div class="medium" style="margin-top:0;">The Building Blocks</div>
+    <div style="display:flex; gap:24px; justify-content:center; margin-top:24px;">
+      <div style="background:var(--card); border:1px solid var(--border); border-top:3px solid var(--blue); border-radius:14px; padding:20px; width:220px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div style="width:36px; height:36px; border-radius:50%; border:2px solid var(--blue); display:flex; align-items:center; justify-content:center; font-size:1.1rem; background:var(--card);">🤖</div>
+          <span style="color:var(--blue); font-weight:700; font-size:1rem;">Agent</span>
+        </div>
+        <div style="font-size:0.78rem; color:var(--dim); line-height:1.7;">
+          LLM + persona file<br>
+          CAN/CANNOT rules<br>
+          <span style="color:var(--red);">Runs once → dies</span>
+        </div>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border); border-top:3px solid var(--purple); border-radius:14px; padding:20px; width:220px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div style="width:36px; height:36px; border-radius:50%; border:2px dashed var(--purple); display:flex; align-items:center; justify-content:center; font-size:1.1rem; background:var(--card);">👻</div>
+          <span style="color:var(--purple); font-weight:700; font-size:1rem;">Sub-Agent</span>
+        </div>
+        <div style="font-size:0.78rem; color:var(--dim); line-height:1.7;">
+          Same LLM, no persona<br>
+          Anonymous, unpoliced<br>
+          <span style="color:var(--red);">Runs once → dies</span>
+        </div>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border); border-top:3px solid var(--cyan); border-radius:14px; padding:20px; width:220px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div style="width:36px; height:36px; border-radius:50%; border:2px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:1.1rem; background:var(--card);">🧠</div>
+          <span style="color:var(--cyan); font-weight:700; font-size:1rem;">Main Session</span>
+        </div>
+        <div style="font-size:0.78rem; color:var(--dim); line-height:1.7;">
+          The orchestrator<br>
+          Spawns agents, passes context<br>
+          <span style="color:var(--green);">The only one that persists</span>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:20px; font-size:0.85rem; color:var(--muted);">VS Code Copilot · Copilot CLI · Claude Code · Conductor</p>
+  </div>
+
+  <!-- ── SLIDE 3: THE SETUP ── -->
+  <div class="slide" data-notes="Show the hierarchy. Me at the top running multiple companies from ONE session. The mistake was trying to orchestrate all of this from a single context window.">
+    <div class="big"><span>The Setup</span></div>
+
+    <style>
+      /* ── Org-chart tree (scoped) ── */
+      .org-wrapper { display:flex; flex-direction:column; align-items:center; margin-top:10px; }
+
+      /* Nodes */
+      .org-node {
+        padding:5px 14px; border-radius:7px; background:var(--card);
+        text-align:center; white-space:nowrap; font-weight:600;
+        border:1.5px solid var(--border); display:inline-block;
+      }
+      .org-node-sm { font-size:0.85rem;  padding:4px 10px; }
+      .org-node-md { font-size:0.95rem; }
+      .org-node-lg { font-size:0.92rem; padding:7px 20px; }
+
+      /* Color variants */
+      .org-blue   { border-color:var(--blue);   color:var(--blue);   }
+      .org-purple { border-color:var(--purple); color:var(--purple); }
+      .org-green  { border-color:var(--green);  color:var(--green);  }
+      .org-cyan   { border-color:var(--cyan);   color:var(--cyan);   }
+      .org-orange { border-color:var(--orange); color:var(--orange); }
+
+      /* Vertical connector between levels */
+      .org-vline { width:1px; height:16px; background:var(--border); margin:0 auto; }
+
+      /* Generic tree wrapper */
+      .org-tree { display:flex; flex-direction:column; align-items:center; }
+
+      /* Row of children */
+      .org-children { display:flex; justify-content:center; }
+
+      /* Individual branch (child column) */
+      .org-branch {
+        display:flex; flex-direction:column; align-items:center;
+        position:relative; padding:16px 6px 0;
+      }
+
+      /* Horizontal connector: each branch draws its share of the bar */
+      .org-branch::before {
+        content:''; position:absolute; top:0; left:0;
+        width:100%; border-top:1px solid var(--border);
+      }
+      .org-branch:first-child::before { left:50%; width:50%; }
+      .org-branch:last-child::before  { right:50%; width:50%; left:auto; }
+      .org-branch:only-child::before  { display:none; }
+
+      /* Vertical drop from bar to node */
+      .org-branch::after {
+        content:''; position:absolute; top:0;
+        left:50%; transform:translateX(-50%);
+        width:1px; height:16px; background:var(--border);
+      }
+
+      /* ── Top-level company row ── */
+      .org-companies { display:flex; justify-content:center; }
+
+      .org-company {
+        display:flex; flex-direction:column; align-items:center;
+        position:relative; padding:16px 24px 0;
+      }
+      .org-company::before {
+        content:''; position:absolute; top:0; left:0;
+        width:100%; border-top:1px solid var(--border);
+      }
+      .org-company:first-child::before { left:50%; width:50%; }
+      .org-company:last-child::before  { right:50%; width:50%; left:auto; }
+      .org-company:only-child::before  { display:none; }
+      .org-company::after {
+        content:''; position:absolute; top:0;
+        left:50%; transform:translateX(-50%);
+        width:1px; height:16px; background:var(--border);
+      }
+
+      .org-company-label {
+        font-size:0.58rem; text-transform:uppercase; letter-spacing:1.5px;
+        color:var(--dim); margin-bottom:6px;
+      }
+
+      /* Dashed placeholder for "...more" */
+      .org-placeholder {
+        margin-top:0; padding:28px 24px; border-radius:8px;
+        border:1.5px dashed var(--muted); text-align:center;
+        color:var(--muted); font-size:0.82rem;
+      }
+
+      .org-ellipsis { color:var(--muted); font-size:0.72rem; margin-top:4px; }
+    </style>
+
+    <!-- ── Org chart ── -->
+    <div class="org-wrapper">
+
+      <!-- Root: Owner -->
+      <div class="org-node org-node-lg org-orange">ME (Owner) — one Copilot session</div>
+      <div class="org-vline"></div>
+
+      <!-- Companies row -->
+      <div class="org-companies">
+
+        <!-- ── Company 1: AgentOS (full tree) ── -->
+        <div class="org-company">
+          <div class="org-company-label">Company 1 — AgentOS</div>
+          <div class="org-tree">
+            <!-- CEO -->
+            <div class="org-node org-node-md org-blue">CEO</div>
+            <div class="org-vline"></div>
+            <!-- VPs -->
+            <div class="org-children">
+              <!-- VP Engineering → 2 Dev Managers -->
+              <div class="org-branch">
+                <div class="org-node org-node-sm org-purple">VP Eng</div>
+                <div class="org-vline"></div>
+                <div class="org-children">
+                  <!-- Dev Mgr 1 (Platform) -->
+                  <div class="org-branch">
+                    <div class="org-node org-node-sm org-green">DevMgr 1</div>
+                    <div class="org-vline"></div>
+                    <div class="org-children">
+                      <div class="org-branch">
+                        <div class="org-node org-node-sm org-cyan">TPM</div>
+                      </div>
+                      <div class="org-branch">
+                        <div class="org-node org-node-sm org-cyan">IC</div>
+                      </div>
+                      <div class="org-branch">
+                        <div class="org-node org-node-sm org-cyan">IC</div>
+                      </div>
+                      <div class="org-branch">
+                        <div class="org-node org-node-sm org-red">QA</div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Dev Mgr 2 (Dashboard) -->
+                  <div class="org-branch">
+                    <div class="org-node org-node-sm org-green">DevMgr 2</div>
+                    <div class="org-vline"></div>
+                    <div class="org-children">
+                      <div class="org-branch">
+                        <div class="org-node org-node-sm org-cyan">TPM</div>
+                      </div>
+                      <div class="org-branch">
+                        <div class="org-node org-node-sm org-cyan">IC</div>
+                      </div>
+                      <div class="org-branch">
+                        <div class="org-node org-node-sm org-red">QA</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- VP Sales -->
+              <div class="org-branch">
+                <div class="org-node org-node-sm org-purple">VP Sales</div>
+              </div>
+              <!-- VP Marketing -->
+              <div class="org-branch">
+                <div class="org-node org-node-sm org-purple">VP Mktg</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Company 2: SubagentUI (abbreviated) ── -->
+        <div class="org-company">
+          <div class="org-company-label">Company 2 — SubagentUI</div>
+          <div class="org-tree">
+            <div class="org-node org-node-md org-blue">CEO</div>
+            <div class="org-vline"></div>
+            <div class="org-children">
+              <div class="org-branch">
+                <div class="org-node org-node-sm org-purple">VP Eng</div>
+              </div>
+              <div class="org-branch">
+                <div class="org-node org-node-sm org-purple">VP Design</div>
+              </div>
+            </div>
+            <div class="org-ellipsis">⋯</div>
+          </div>
+        </div>
+
+        <!-- ── Company N: placeholder ── -->
+        <div class="org-company">
+          <div class="org-placeholder">
+            <div style="font-size:1.1rem; margin-bottom:2px;">⋯</div>
+            Company N
+          </div>
+        </div>
+
+      </div><!-- /org-companies -->
+    </div><!-- /org-wrapper -->
+
+    <p class="small" style="margin-top:28px;">One session. Multiple companies. Talking to each CEO.</p>
+  </div>
+
+  <!-- ── SLIDE 4: THE ILLUSION ── -->
+  <style>
+    /* Slide 4 scoped styles — org chart tree */
+    .s4-node{padding:5px 12px;border-radius:8px;font-size:0.72rem;font-weight:600;background:var(--card);white-space:nowrap;position:relative}
+    .s4-blue{border:2px solid var(--blue);color:var(--blue)}
+    .s4-purple{border:2px solid var(--purple);color:var(--purple)}
+    .s4-green{border:2px solid var(--green);color:var(--green)}
+    .s4-cyan{border:2px solid var(--cyan);color:var(--cyan)}
+    .s4-red{border:2px solid var(--red);color:var(--red)}
+    .s4-vline{width:1px;height:10px;background:var(--border);margin:0 auto}
+    .s4-row{display:flex;justify-content:center;align-items:flex-start;gap:10px;position:relative}
+    /* Horizontal connector bar between children */
+    .s4-branch{display:flex;flex-direction:column;align-items:center;position:relative}
+    .s4-branch>.s4-vline{height:10px}
+    .s4-hbar{position:absolute;top:0;height:1px;background:var(--border)}
+    /* Children group: vertical line up from each child */
+    .s4-child{display:flex;flex-direction:column;align-items:center}
+    .s4-child::before{content:'';display:block;width:1px;height:10px;background:var(--border)}
+    .s4-leaf-group{display:flex;gap:4px;justify-content:center}
+    .s4-leaf-group .s4-node{font-size:0.65rem;padding:3px 8px}
+    .s4-tree{display:flex;flex-direction:column;align-items:center;gap:0;min-width:320px;max-width:360px}
+    /* Connector bar for VP level */
+    .s4-vp-row{position:relative;display:flex;justify-content:center;gap:10px}
+    .s4-vp-row::before{content:'';position:absolute;top:0;left:calc(50% - 90px);width:180px;height:1px;background:var(--border)}
+    .s4-vp-row>.s4-child::before{height:10px}
+    /* Connector bar for DevMgr level */
+    .s4-dm-row{position:relative;display:flex;justify-content:center;gap:24px}
+    .s4-dm-row::before{content:'';position:absolute;top:0;left:calc(50% - 48px);width:96px;height:1px;background:var(--border)}
+    .s4-dm-row>.s4-child::before{height:10px}
+    /* Leaf connector bars under each DevMgr */
+    .s4-leaf-col{display:flex;flex-direction:column;align-items:center}
+    .s4-leaf-col>.s4-vline{height:8px}
+    .s4-leaf-row{position:relative;display:flex;justify-content:center;gap:4px}
+    .s4-leaf-row::before{content:'';position:absolute;top:0;left:8px;right:8px;height:1px;background:var(--border)}
+    .s4-leaf-row>.s4-child::before{height:8px}
+  </style>
+  <div class="slide" data-notes="Agents have persona files with CAN/CANNOT rules. They're governed. Named. But governance is not persistence — that comes next in Act 2.">
+    <div class="big"><span>Agents Have Rules</span></div>
+    <div style="display:flex;gap:40px;align-items:center;justify-content:center;margin-top:12px;">
+
+      <!-- Left: org chart using slide 3's .org- classes (Company 1 only) -->
+      <div class="org-wrapper" style="transform:scale(0.95);transform-origin:top center;">
+        <div class="org-node org-node-lg org-orange">ME (Owner)</div>
+        <div class="org-vline"></div>
+        <div class="org-companies">
+          <div class="org-company">
+            <div class="org-company-label">AgentOS</div>
+            <div class="org-tree">
+              <div class="org-node org-node-md org-blue">CEO ←</div>
+              <div class="org-vline"></div>
+              <div class="org-children">
+                <div class="org-branch">
+                  <div class="org-node org-node-sm org-purple">VP Eng</div>
+                  <div class="org-vline"></div>
+                  <div class="org-children">
+                    <div class="org-branch">
+                      <div class="org-node org-node-sm org-green">DevMgr 1</div>
+                      <div class="org-vline"></div>
+                      <div class="org-children">
+                        <div class="org-branch"><div class="org-node org-node-sm org-cyan">TPM</div></div>
+                        <div class="org-branch"><div class="org-node org-node-sm org-cyan">IC</div></div>
+                        <div class="org-branch"><div class="org-node org-node-sm org-red">QA</div></div>
+                      </div>
+                    </div>
+                    <div class="org-branch">
+                      <div class="org-node org-node-sm org-green">DevMgr 2</div>
+                      <div class="org-vline"></div>
+                      <div class="org-children">
+                        <div class="org-branch"><div class="org-node org-node-sm org-cyan">TPM</div></div>
+                        <div class="org-branch"><div class="org-node org-node-sm org-cyan">IC</div></div>
+                        <div class="org-branch"><div class="org-node org-node-sm org-red">QA</div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="org-branch"><div class="org-node org-node-sm org-purple">VP Sales</div></div>
+                <div class="org-branch"><div class="org-node org-node-sm org-purple">VP Mktg</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: .agent.md snippet -->
+      <div style="display:flex;flex-direction:column;align-items:flex-start;max-width:380px;">
+        <div style="font-size:0.75rem;color:var(--muted);font-family:'Fira Code',monospace;margin-bottom:6px;">.github/agents/ceo.agent.md</div>
+        <div class="code" style="text-align:left;width:100%;font-size:0.88rem;line-height:1.7;">
+          <span class="c"># CEO — Ria Vasquez</span><br>
+          <br>
+          <span class="g">CAN:</span><br>
+          <span class="g">&nbsp;&nbsp;✓ Set vision, hire VPs</span><br>
+          <span class="g">&nbsp;&nbsp;✓ Approve execution plans</span><br>
+          <span class="g">&nbsp;&nbsp;✓ Present demos to Owner</span><br>
+          <br>
+          <span class="p">CANNOT:</span><br>
+          <span class="p">&nbsp;&nbsp;✗ Write code</span><br>
+          <span class="p">&nbsp;&nbsp;✗ Assign IC tasks</span><br>
+          <span class="p">&nbsp;&nbsp;✗ Skip QA gates</span>
+        </div>
+      </div>
+
+    </div>
+
+    <p style="margin-top:16px;font-size:1rem;text-align:center;color:var(--dim);">Named. Governed. Persona reloads fresh every turn — no learning.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       ACT 2: WHERE IT BROKE
+       ═══════════════════════════════════════════ -->
+
+  <!-- ── ACT 2 TITLE ── -->
+  <div class="slide" data-notes="One story. One feature. Watch everything fall apart.">
+    <div class="tag">Act 2</div>
+    <div class="medium">Where It Broke</div>
+  </div>
+
+  <!-- ── THE PREMISE ── -->
+  <div class="slide" data-notes="This is the baseline constraint that causes everything in Act 2. Every agent — no matter how well-governed — runs once, responds, and dies. Zero memory. Zero state. The persona file reloads fresh every time.">
+    <div class="big">Every agent <span style="color:var(--red);">dies</span> after one turn.</div>
+    <p class="small" style="margin-top:28px;">One request. One response. Gone.<br>Zero memory. The persona reloads fresh every time.</p>
+  </div>
+
+  <!-- ── SLIDE 6: CEO CAN'T HIRE ── -->
+  <div class="slide" data-notes="CEO says route to VP but has no spawn tool. She dies. VP was never deployed.">
+    <style>
+      /* ── Comic strip scoped styles ── */
+      .comic-strip {
+        display: grid;
+        grid-template-columns: 1fr 0.35fr 1fr;
+        gap: 16px;
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .comic-panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 16px 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s var(--ease-out-expo), transform 0.6s var(--ease-out-expo);
+      }
+      .comic-panel--success { border-color: rgba(63,185,80,0.4); box-shadow: 0 0 20px rgba(63,185,80,0.06); }
+      .comic-panel--fail    { border-color: rgba(248,81,73,0.4); box-shadow: 0 0 20px rgba(248,81,73,0.06); }
+      .comic-panel--break   { justify-content: center; align-items: center; background: transparent; border-style: dashed; border-color: var(--muted); }
+
+      .slide.active .comic-panel:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+      .slide.active .comic-panel:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.8s; }
+      .slide.active .comic-panel:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 1.3s; }
+
+      .comic-panel-label {
+        font-family: 'Fira Code', monospace;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin-bottom: 2px;
+      }
+
+      .comic-dialogue {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+      }
+
+      .comic-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .comic-row--reverse { flex-direction: row-reverse; }
+
+      /* Avatar circles */
+      .comic-avatar {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        border-radius: 50%;
+        border: 2px solid var(--cyan);
+        background: var(--card);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+      }
+      .comic-avatar--blue   { border-color: var(--blue); }
+      .comic-avatar--cyan   { border-color: var(--cyan); }
+      .comic-avatar--purple { border-color: var(--purple); }
+      .comic-avatar--green  { border-color: var(--green); }
+      .comic-avatar--red    { border-color: var(--red); }
+      .comic-avatar--orange { border-color: var(--orange); }
+      .comic-avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+      .comic-avatar-name {
+        font-size: 0.65rem;
+        font-family: 'Fira Code', monospace;
+        color: var(--cyan);
+        white-space: nowrap;
+      }
+      .comic-avatar-name--blue { color: var(--blue); }
+
+      /* Speech bubbles */
+      .comic-bubble {
+        position: relative;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 10px 14px;
+        font-size: 0.82rem;
+        line-height: 1.45;
+        max-width: 220px;
+        color: var(--text);
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.5s var(--ease-out-expo), transform 0.5s var(--ease-out-expo);
+      }
+      .comic-bubble--left::after {
+        content: '';
+        position: absolute;
+        left: -7px;
+        top: 14px;
+        border-width: 6px;
+        border-style: solid;
+        border-color: transparent var(--border) transparent transparent;
+      }
+      .comic-bubble--right::after {
+        content: '';
+        position: absolute;
+        right: -7px;
+        top: 14px;
+        border-width: 6px;
+        border-style: solid;
+        border-color: transparent transparent transparent var(--border);
+      }
+      .comic-bubble--error {
+        border-color: var(--red);
+        background: rgba(248,81,73,0.05);
+      }
+      .comic-bubble--error::after {
+        border-color: transparent transparent transparent var(--red);
+      }
+
+      /* Staggered reveal */
+      .comic-panel { opacity: 0; transform: translateY(15px); transition: opacity 0.5s var(--ease-out-expo), transform 0.5s var(--ease-out-expo); }
+      .comic-avatar-wrap { opacity: 0; transition: opacity 0.4s ease; }
+
+      .slide.active .comic-strip > :nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+      .slide.active .comic-strip > :nth-child(1) .comic-dialogue > :nth-child(1) .comic-avatar-wrap { opacity: 1; transition-delay: 0.8s; }
+      .slide.active .comic-strip > :nth-child(1) .comic-dialogue > :nth-child(1) .comic-bubble { opacity: 1; transform: translateY(0); transition-delay: 1.1s; }
+      .slide.active .comic-strip > :nth-child(1) .comic-dialogue > :nth-child(2) .comic-avatar-wrap { opacity: 1; transition-delay: 2.2s; }
+      .slide.active .comic-strip > :nth-child(1) .comic-dialogue > :nth-child(2) .comic-bubble { opacity: 1; transform: translateY(0); transition-delay: 2.5s; }
+
+      .slide.active .comic-strip > :nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 3.8s; }
+
+      .slide.active .comic-strip > :nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 4.8s; }
+      .slide.active .comic-strip > :nth-child(3) .comic-dialogue > :nth-child(1) .comic-avatar-wrap { opacity: 1; transition-delay: 5.3s; }
+      .slide.active .comic-strip > :nth-child(3) .comic-dialogue > :nth-child(1) .comic-bubble { opacity: 1; transform: translateY(0); transition-delay: 5.6s; }
+      .slide.active .comic-strip > :nth-child(3) .comic-dialogue > :nth-child(2) .comic-avatar-wrap { opacity: 1; transition-delay: 6.8s; }
+      .slide.active .comic-strip > :nth-child(3) .comic-dialogue > :nth-child(2) .comic-bubble { opacity: 1; transform: translateY(0); transition-delay: 7.1s; }
+
+      /* Session break styling */
+      .comic-break-line {
+        width: 2px;
+        height: 40px;
+        border-left: 2px dashed var(--muted);
+      }
+      .comic-break-icon { font-size: 1.4rem; margin: 6px 0; }
+      .comic-break-text {
+        font-size: 0.72rem;
+        font-family: 'Fira Code', monospace;
+        color: var(--red);
+        text-align: center;
+        line-height: 1.5;
+        max-width: 120px;
+      }
+
+      /* Panel number badge */
+      .comic-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        font-size: 0.65rem;
+        font-weight: 700;
+        font-family: 'Fira Code', monospace;
+        color: var(--bg);
+        margin-bottom: 2px;
+      }
+      .comic-num--green  { background: var(--green); }
+      .comic-num--red    { background: var(--red); }
+      .comic-num--muted  { background: var(--muted); }
+    </style>
+
+    <div class="medium" style="margin-top:0; margin-bottom:18px;">CEO Can't Hire</div>
+
+    <div class="comic-strip">
+      <!-- PANEL 1: Me → CEO Ria -->
+      <div class="comic-panel comic-panel--success">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num comic-num--green">1</span>
+          <span class="comic-panel-label">Me → CEO Ria</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--cyan">👤</div>
+              <span class="comic-avatar-name">Me</span>
+            </div>
+            <div class="comic-bubble comic-bubble--left">Build an agent dashboard.</div>
+          </div>
+          <div class="comic-row comic-row--reverse">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--blue">👩‍💼</div>
+              <span class="comic-avatar-name comic-avatar-name--blue">CEO Ria</span>
+            </div>
+            <div class="comic-bubble comic-bubble--right">On it. Routing to VP Eng.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Break -->
+      <div class="comic-panel comic-panel--break">
+        <span class="comic-num comic-num--muted">⚡</span>
+        <div class="comic-break-line"></div>
+        <div class="comic-break-icon">💀</div>
+        <div class="comic-break-text">CEO Ria is dead.<br>VP was never deployed.</div>
+        <div class="comic-break-line"></div>
+      </div>
+
+      <!-- PANEL 3: VP never called -->
+      <div class="comic-panel comic-panel--fail">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num comic-num--red">3</span>
+          <span class="comic-panel-label">Meanwhile</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--purple">🤷</div>
+              <span class="comic-avatar-name" style="color:var(--purple);">VP Eng</span>
+            </div>
+            <div class="comic-bubble comic-bubble--left comic-bubble--error">Nobody called me.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:14px; font-size:0.95rem; text-align:center; color:var(--red); font-weight:600;">Agents can't spawn agents. CEO can only suggest — not deploy.</p>
+  </div>
+
+  <!-- ── SLIDE 7: I'LL DO THE HIRING ── -->
+  <div class="slide" data-notes="I deploy VP myself but forget to pass CEO's output. VP has total amnesia.">
+    <div class="medium" style="margin-top:0; margin-bottom:18px;">Fine, I'll Deploy VP Myself</div>
+
+    <div class="comic-strip">
+      <!-- PANEL 1: Me → CEO Ria -->
+      <div class="comic-panel comic-panel--success">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num comic-num--green">1</span>
+          <span class="comic-panel-label">Me → CEO Ria</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--cyan">👤</div>
+              <span class="comic-avatar-name">Me</span>
+            </div>
+            <div class="comic-bubble comic-bubble--left">Build an agent dashboard.</div>
+          </div>
+          <div class="comic-row comic-row--reverse">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--blue">👩‍💼</div>
+              <span class="comic-avatar-name comic-avatar-name--blue">CEO Ria</span>
+            </div>
+            <div class="comic-bubble comic-bubble--right">On it. Routing to VP Eng.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Break — I intervene -->
+      <div class="comic-panel comic-panel--break">
+        <span class="comic-num comic-num--muted">⚡</span>
+        <div class="comic-break-line"></div>
+        <div class="comic-break-icon">💀 → 🔄</div>
+        <div class="comic-break-text">CEO dead. I deploy<br>VP Eng manually.</div>
+        <div class="comic-break-line"></div>
+      </div>
+
+      <!-- PANEL 3: VP has no context -->
+      <div class="comic-panel comic-panel--fail">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num comic-num--red">3</span>
+          <span class="comic-panel-label">Me → VP Eng</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--cyan">👤</div>
+              <span class="comic-avatar-name">Me</span>
+            </div>
+            <div class="comic-bubble comic-bubble--left">CEO planned the dashboard. What's the plan?</div>
+          </div>
+          <div class="comic-row comic-row--reverse">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--purple">🤷</div>
+              <span class="comic-avatar-name" style="color:var(--purple);">VP Eng</span>
+            </div>
+            <div class="comic-bubble comic-bubble--right comic-bubble--error">…what plan?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:14px; font-size:0.95rem; text-align:center; color:var(--red); font-weight:600;">No context was passed. VP has no idea what CEO decided.</p>
+  </div>
+
+  <!-- ── SLIDE 8: I'LL TELL EVERYONE ── -->
+  <div class="slide" data-notes="Both agents work on the same feature independently. Different endpoints, different schemas.">
+    <div class="medium" style="margin-top:0; margin-bottom:18px;">Fine, I'll Tell Everyone Myself</div>
+
+    <div class="comic-strip">
+      <!-- PANEL 1: IC Backend -->
+      <div class="comic-panel" style="border-color:var(--green);">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num comic-num--green">1</span>
+          <span class="comic-panel-label">IC Backend</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--green">⚙️</div>
+              <span class="comic-avatar-name" style="color:var(--green);">IC Backend</span>
+            </div>
+            <div class="comic-bubble comic-bubble--left">I'll build the status API.<br><span style="color:var(--green);">GET /agents/status</span><br>→ { agents: [...] }</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: No contact -->
+      <div class="comic-panel comic-panel--break">
+        <span class="comic-num comic-num--muted">🔇</span>
+        <div class="comic-break-line"></div>
+        <div class="comic-break-text" style="color:var(--dim);">No contact.<br>No shared spec.</div>
+        <div class="comic-break-line"></div>
+      </div>
+
+      <!-- PANEL 3: IC Frontend -->
+      <div class="comic-panel" style="border-color:var(--purple);">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num" style="background:rgba(188,140,255,0.15);color:var(--purple);">2</span>
+          <span class="comic-panel-label">IC Frontend</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--purple">🎨</div>
+              <span class="comic-avatar-name" style="color:var(--purple);">IC Frontend</span>
+            </div>
+            <div class="comic-bubble comic-bubble--left">I'll build the dashboard.<br><span style="color:var(--red);">GET /api/v1/agent-list</span><br>→ expects { data: [...] }</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:14px; font-size:1.1rem; text-align:center; color:var(--red); font-weight:700;">/agents/status ≠ /api/v1/agent-list — they never talked.</p>
+  </div>
+
+  <!-- ── SLIDE 8b: EVEN CONTRACTS FAIL ── -->
+  <div class="slide" data-notes="Even with contracts, runtime changes can't be communicated. There's no peer channel.">
+    <div class="medium" style="margin-top:0; margin-bottom:18px;">"Just pass a shared contract?"</div>
+
+    <div class="comic-strip">
+      <!-- PANEL 1: Backend runtime change -->
+      <div class="comic-panel" style="border-color:var(--green);">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num comic-num--green">⚙️</span>
+          <span class="comic-panel-label">IC Backend mid-build</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--green">⚙️</div>
+              <span class="comic-avatar-name" style="color:var(--green);">IC Backend</span>
+            </div>
+            <div class="comic-bubble comic-bubble--left">Had to add a <span style="color:var(--orange);">cluster</span> field.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: No way to tell -->
+      <div class="comic-panel comic-panel--break">
+        <span class="comic-num comic-num--muted">🔇</span>
+        <div class="comic-break-line"></div>
+        <div class="comic-break-text" style="color:var(--red);">No Teams call.<br>No Slack.<br>No way to tell.</div>
+        <div class="comic-break-line"></div>
+      </div>
+
+      <!-- PANEL 3: Frontend doesn't know -->
+      <div class="comic-panel" style="border-color:var(--purple);">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num" style="background:rgba(188,140,255,0.15);color:var(--purple);">🎨</span>
+          <span class="comic-panel-label">IC Frontend mid-build</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
+            <div class="comic-avatar-wrap">
+              <div class="comic-avatar comic-avatar--purple">🎨</div>
+              <span class="comic-avatar-name" style="color:var(--purple);">IC Frontend</span>
+            </div>
+            <div class="comic-bubble comic-bubble--left comic-bubble--error">Still rendering without cluster grouping.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:14px; font-size:1rem; text-align:center; color:var(--dim);">Upfront contracts help. <span style="color:var(--red); font-weight:600;">Runtime coordination doesn't exist.</span></p>
+  </div>
+
+  <!-- ── BRIDGE: WHO DOES ALL THIS? ── -->
+  <div class="slide" data-notes="Pause. Let the audience wonder. They've seen 4 failures: can't hire, can't remember, can't talk, can't coordinate. So how does anything work? Who's been doing all the work?">
+    <div class="big"><span>So who's been doing all of this?</span></div>
+    <p class="small" style="margin-top:24px;">The hiring. The context passing. The coordination.</p>
+  </div>
+
+  <!-- ── SLIDE 9: THE REAL MEGA-AGENT ── -->
+  <div class="slide" data-notes="Same org chart from earlier but now with the hidden orchestrator layer revealed.">
+    <div class="medium" style="margin-top:0; margin-bottom:8px;">The <span style="color:var(--red);">Real</span> Mega-Agent</div>
+
+    <div class="org-wrapper">
+
+      <!-- Root: Owner -->
+      <div class="org-node org-node-lg org-orange">ME (Owner)</div>
+      <div class="org-vline"></div>
+
+      <!-- Orchestrator + tool arrows -->
+      <div style="display:flex; align-items:center; justify-content:center; gap:20px;">
+        <div style="padding:8px 24px; border:2px solid var(--orange); border-radius:14px; text-align:center; background:var(--card); box-shadow:0 0 16px rgba(240,136,62,0.25);">
+          <span style="color:var(--orange); font-size:0.6rem; text-transform:uppercase; letter-spacing:1px;">Orchestrator</span><br>
+          <span style="font-size:0.85rem; font-weight:600;">Main LLM Session</span><br>
+          <span style="font-size:0.65rem; color:var(--red);">context: growing every turn ▲</span>
+        </div>
+        <span style="color:var(--muted); font-size:1.2rem;">→</span>
+        <div style="display:flex; gap:8px;">
+          <div style="padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:var(--card); text-align:center; font-size:0.65rem; color:var(--dim); line-height:1.4;">
+            ⌨️<br>Copilot CLI
+          </div>
+          <div style="padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:var(--card); text-align:center; font-size:0.65rem; color:var(--dim); line-height:1.4;">
+            💻<br>VS Code
+          </div>
+          <div style="padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:var(--card); text-align:center; font-size:0.65rem; color:var(--dim); line-height:1.4;">
+            🧠<br>Claude Code
+          </div>
+        </div>
+      </div>
+      <div class="org-vline"></div>
+
+      <!-- Companies row (faded) -->
+      <div class="org-companies" style="opacity:0.5;">
+
+        <!-- Company 1: AgentOS -->
+        <div class="org-company">
+          <div class="org-company-label">Company 1 — AgentOS</div>
+          <div class="org-tree">
+            <div class="org-node org-node-md org-blue">CEO</div>
+            <div class="org-vline"></div>
+            <div class="org-children">
+              <div class="org-branch">
+                <div class="org-node org-node-sm org-purple">VP Eng</div>
+                <div class="org-vline"></div>
+                <div class="org-children">
+                  <div class="org-branch">
+                    <div class="org-node org-node-sm org-green">DevMgr 1</div>
+                    <div class="org-vline"></div>
+                    <div class="org-children">
+                      <div class="org-branch"><div class="org-node org-node-sm org-cyan">TPM</div></div>
+                      <div class="org-branch"><div class="org-node org-node-sm org-cyan">IC</div></div>
+                      <div class="org-branch"><div class="org-node org-node-sm org-cyan">IC</div></div>
+                      <div class="org-branch"><div class="org-node org-node-sm org-red">QA</div></div>
+                    </div>
+                  </div>
+                  <div class="org-branch">
+                    <div class="org-node org-node-sm org-green">DevMgr 2</div>
+                    <div class="org-vline"></div>
+                    <div class="org-children">
+                      <div class="org-branch"><div class="org-node org-node-sm org-cyan">TPM</div></div>
+                      <div class="org-branch"><div class="org-node org-node-sm org-cyan">IC</div></div>
+                      <div class="org-branch"><div class="org-node org-node-sm org-red">QA</div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="org-branch"><div class="org-node org-node-sm org-purple">VP Sales</div></div>
+              <div class="org-branch"><div class="org-node org-node-sm org-purple">VP Mktg</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Company 2: SubagentUI -->
+        <div class="org-company">
+          <div class="org-company-label">Company 2 — SubagentUI</div>
+          <div class="org-tree">
+            <div class="org-node org-node-md org-blue">CEO</div>
+            <div class="org-vline"></div>
+            <div class="org-children">
+              <div class="org-branch"><div class="org-node org-node-sm org-purple">VP Eng</div></div>
+              <div class="org-branch"><div class="org-node org-node-sm org-purple">VP Design</div></div>
+            </div>
+            <div class="org-ellipsis">⋯</div>
+          </div>
+        </div>
+
+        <!-- Company N -->
+        <div class="org-company">
+          <div class="org-placeholder">
+            <div style="font-size:1.1rem; margin-bottom:2px;">⋯</div>
+            Company N
+          </div>
+        </div>
+
+      </div><!-- /org-companies -->
+      <p style="font-size:0.72rem; color:var(--muted); text-align:center; margin-top:4px;">each agent = one API call → dies</p>
+    </div><!-- /org-wrapper -->
+  </div>
+
+  <!-- ── SLIDE 10: THE MEGA-AGENT TRAP ── -->
+  <div class="slide" data-notes="The orchestrator accumulates every agent's output. Context grows every turn. Quality degrades. This is context rot — and it happened to THIS session building this presentation.">
+    <div class="medium" style="margin-top:0; margin-bottom:16px;">Context Rot</div>
+    <p class="small" style="margin-bottom:24px;">The orchestrator accumulates everything. Quality degrades.</p>
+    <div class="code" style="text-align:left; max-width:500px; font-size:0.9rem; line-height:1.8;">
+      <span class="c">// Orchestrator context over time:</span><br>
+      <span class="g">Turn 1:</span> CEO output &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="g">█</span> 2K tokens<br>
+      <span class="g">Turn 2:</span> + VP output &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="g">██</span> 5K<br>
+      <span class="o">Turn 3:</span> + TPM output &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="o">████</span> 12K<br>
+      <span class="o">Turn 4:</span> + IC Backend &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="o">██████</span> 25K<br>
+      <span class="r">Turn 5:</span> + IC Frontend &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="r">█████████</span> 40K<br>
+      <span class="r">Turn 6:</span> + QA &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="r">████████████</span> 55K<br>
+      <span class="r">Turn 7:</span> + reports... &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="r">████████████████</span> 80K+
+    </div>
+  </div>
+
+
+  <!-- ── BRIDGE: THIS ISN'T JUST MY PROBLEM ── -->
+  <div class="slide" data-notes="Ground it for the audience. This isn't about company hierarchies — these are real dev workflow problems. PR reviews, CI analysis, code refactoring — all hit the same walls. Reference Claude Code issue #4182.">
+    <div class="medium" style="margin-top:0;">This Isn't Just a Company Problem</div>
+    <div style="display:flex; gap:20px; justify-content:center; margin-top:24px;">
+      <div style="background:var(--card); border:1px solid var(--border); border-top:3px solid var(--blue); border-radius:14px; padding:18px; width:200px;">
+        <div style="font-size:1.2rem; margin-bottom:6px;">🔍</div>
+        <div style="font-size:0.9rem; font-weight:600; color:var(--blue);">PR Reviews</div>
+        <div style="font-size:0.72rem; color:var(--dim); margin-top:6px;">Review code + analyze CI logs + check coverage = context overflow</div>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border); border-top:3px solid var(--purple); border-radius:14px; padding:18px; width:200px;">
+        <div style="font-size:1.2rem; margin-bottom:6px;">🔄</div>
+        <div style="font-size:0.9rem; font-weight:600; color:var(--purple);">Refactoring</div>
+        <div style="font-size:0.72rem; color:var(--dim); margin-top:6px;">One agent can't scope + implement + test across 50 files</div>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border); border-top:3px solid var(--orange); border-radius:14px; padding:18px; width:200px;">
+        <div style="font-size:1.2rem; margin-bottom:6px;">🐛</div>
+        <div style="font-size:0.9rem; font-weight:600; color:var(--orange);">Debugging</div>
+        <div style="font-size:0.72rem; color:var(--dim); margin-top:6px;">Parse logs + test hypotheses in parallel = needs multiple agents</div>
+      </div>
+    </div>
+    <p style="margin-top:20px; font-size:0.85rem; color:var(--dim);">From <span style="color:var(--cyan);">Claude Code issue #4182</span>: "Without nested tasks, the PR review agent must process entire CI logs in its own context — thousands of lines. This leads to context rot."</p>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════
+       ACT 3: HOW I ADAPTED (slides 11-13)
+       ═══════════════════════════════════════════ -->
+
+  <!-- ── SLIDE 11: ACT 3 TITLE ── -->
+  <div class="slide" data-notes="Four patterns that each fix a specific failure from Act 2.">
+    <div class="tag">Act 3</div>
+    <div class="big"><span>How I Adapted</span></div>
+  </div>
+
+  <!-- ── SLIDE 12: DOCS AS MESSAGE BUS ── -->
+  <div class="slide" data-notes="Borrowed from MetaGPT's pub-sub pattern. Agents read from docs, write to docs. The repo is the message bus.">
+    <div class="medium" style="margin-top:0;">Docs as Message Bus</div>
+    <p class="small" style="margin-bottom:20px;">Agents can't remember. Files can.</p>
+
+    <!-- Orchestrator + Agents Diagram -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:20px; max-width:600px;">
+      <!-- Orchestrator -->
+      <div style="display:inline-block; padding:6px 14px; border:2px solid var(--orange); border-radius:10px; background:var(--card); text-align:center;">
+        <div style="font-size:1.1rem;">🧠</div>
+        <div style="font-size:0.65rem; color:var(--orange); font-weight:600;">Orchestrator</div>
+      </div>
+      <!-- Arrows down -->
+      <div style="display:flex; gap:80px; color:var(--muted); font-size:1.1rem;">
+        <span>↓</span><span>↓</span>
+      </div>
+      <!-- Agent A → file → Agent B -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--green); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">Agent A</div>
+        <span style="color:var(--muted); font-size:1.1rem;">→</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--cyan); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600; box-shadow:0 0 12px rgba(57,210,192,0.2);">📄 findings.md</div>
+        <span style="color:var(--muted); font-size:1.1rem;">→</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--green); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">Agent B</div>
+      </div>
+    </div>
+
+    <div class="code" style="text-align:left; max-width:520px; line-height:1.9;">
+      <span class="c">// No context passed between agents.</span><br>
+      <span class="c">// Agent B reads what Agent A wrote.</span><br>
+      <span class="c">// The repo is the shared memory.</span> <span class="g">✓</span>
+    </div>
+
+    <p class="small" style="margin-top:16px; color:var(--dim);">Fixes: Agent Isolation · Amnesia</p>
+  </div>
+
+  <!-- ── SLIDE 13: SHARED CONTRACTS ── -->
+  <div class="slide" data-notes="The contract is the communication channel. Agents never talk peer-to-peer — they align through a shared document.">
+    <div class="medium" style="margin-top:0;">Shared Contracts</div>
+    <p class="small" style="margin-bottom:20px;">ICs don't talk. They read the same spec.</p>
+
+    <!-- Orchestrator + Agents Diagram -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:20px; max-width:600px;">
+      <!-- Orchestrator -->
+      <div style="display:inline-block; padding:6px 14px; border:2px solid var(--orange); border-radius:10px; background:var(--card); text-align:center;">
+        <div style="font-size:1.1rem;">🧠</div>
+        <div style="font-size:0.65rem; color:var(--orange); font-weight:600;">Orchestrator</div>
+      </div>
+      <span style="color:var(--muted); font-size:1.1rem;">↓</span>
+      <!-- Dev Manager → defines → Contract -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--orange); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">Dev Manager</div>
+        <span style="color:var(--muted); font-size:0.75rem;">→ defines →</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--cyan); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600; box-shadow:0 0 12px rgba(57,210,192,0.2);">📋 API Contract</div>
+      </div>
+      <!-- Arrows fanning down -->
+      <div style="display:flex; gap:60px; color:var(--muted); font-size:1.1rem;">
+        <span>↓</span><span>↓</span>
+      </div>
+      <!-- ICs -->
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--green); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">IC Backend</div>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--purple); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">IC Frontend</div>
+      </div>
+    </div>
+
+    <div class="code" style="text-align:left; max-width:520px; line-height:1.9;">
+      <span class="c">// Dev Manager defines:</span> <span class="cy">GET /agents/status</span><br>
+      <span class="c">// Backend implements it.</span><br>
+      <span class="c">// Frontend calls it.</span><br>
+      <span class="c">// They never speak.</span> <span class="g">It works. ✓</span>
+    </div>
+
+    <p class="small" style="margin-top:16px; color:var(--dim);">Fixes: No Communication · Runtime Coordination</p>
+  </div>
+
+  <!-- ── SLIDE 14: TWO-STEP PATTERN ── -->
+  <div class="slide" data-notes="Never give one agent more than 3 deliverables. If it's bigger, split it. Managers think about scope, ICs think about code.">
+    <div class="medium" style="margin-top:0;">Two-Step Pattern</div>
+    <p class="small" style="margin-bottom:20px;">Managers scope. ICs execute.</p>
+
+    <!-- Orchestrator + Agents Diagram -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:20px; max-width:600px;">
+      <!-- Orchestrator -->
+      <div style="display:inline-block; padding:6px 14px; border:2px solid var(--orange); border-radius:10px; background:var(--card); text-align:center;">
+        <div style="font-size:1.1rem;">🧠</div>
+        <div style="font-size:0.65rem; color:var(--orange); font-weight:600;">Orchestrator</div>
+      </div>
+      <span style="color:var(--muted); font-size:1.1rem;">↓</span>
+      <!-- Step 1 row -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:0.7rem; color:var(--dim); font-weight:600; min-width:50px;">Step 1</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--orange); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">Manager</div>
+        <span style="color:var(--muted); font-size:0.75rem;">→ returns split</span>
+      </div>
+      <span style="color:var(--muted); font-size:1.1rem;">↓</span>
+      <!-- Step 2 row -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:0.7rem; color:var(--dim); font-weight:600; min-width:50px;">Step 2</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--cyan); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600; box-shadow:0 0 12px rgba(57,210,192,0.2);">IC 1</div>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--cyan); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600; box-shadow:0 0 12px rgba(57,210,192,0.2);">IC 2</div>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--cyan); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600; box-shadow:0 0 12px rgba(57,210,192,0.2);">IC 3</div>
+        <span style="color:var(--muted); font-size:0.75rem;">← parallel</span>
+      </div>
+    </div>
+
+    <div class="code" style="text-align:left; max-width:580px; line-height:1.9;">
+      <span class="b">Step 1:</span> Manager → <span class="cy">"split the work"</span> → returns: who does what<br>
+      <span class="b">Step 2:</span> ICs → execute in parallel → each: focused scope only<br>
+      <span class="g">Rule: >3 deliverables = must split</span>
+    </div>
+
+    <p class="small" style="margin-top:16px; color:var(--dim);">Fixes: Mega-Agent Trap · Context Rot</p>
+  </div>
+
+  <!-- ── SLIDE 15: DETERMINISTIC ORCHESTRATION ── -->
+  <div class="slide" data-notes="Conductor is the same orchestration pattern but the brain is Python code, not an LLM. It reads YAML, routes agent outputs, never accumulates context. The DAG shows every step — nothing hidden.">
+    <div class="medium" style="margin-top:0;">Deterministic Orchestration</div>
+    <p class="small" style="margin-bottom:20px;">Replace the LLM orchestrator with code.</p>
+
+    <!-- Orchestrator + Agents Diagram -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:20px; max-width:600px;">
+      <!-- Swap: LLM → YAML -->
+      <div style="display:flex; align-items:center; gap:16px;">
+        <!-- LLM Orchestrator (faded, struck-through) -->
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--orange); border-radius:10px; background:var(--card); text-align:center; opacity:0.4;">
+          <div style="font-size:1.1rem;">🧠</div>
+          <div style="font-size:0.65rem; color:var(--orange); font-weight:600; text-decoration:line-through;">LLM Orchestrator</div>
+        </div>
+        <span style="color:var(--muted); font-size:1.3rem;">→</span>
+        <!-- YAML Orchestrator (bright, green) -->
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--green); border-radius:10px; background:var(--card); text-align:center; box-shadow:0 0 12px rgba(63,185,80,0.2);">
+          <div style="font-size:1.1rem;">⚙️</div>
+          <div style="font-size:0.65rem; color:var(--green); font-weight:600;">YAML Orchestrator</div>
+        </div>
+      </div>
+      <span style="color:var(--muted); font-size:1.1rem;">↓</span>
+      <!-- Agent chain -->
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:center;">
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--blue); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">CEO</div>
+        <span style="color:var(--muted); font-size:1.1rem;">→</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--purple); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">VP</div>
+        <span style="color:var(--muted); font-size:1.1rem;">→</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--cyan); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">TPM</div>
+        <span style="color:var(--muted); font-size:1.1rem;">→</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--orange); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">DevM</div>
+        <span style="color:var(--muted); font-size:1.1rem;">→</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--green); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">ICs</div>
+        <span style="color:var(--muted); font-size:1.1rem;">→</span>
+        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--green); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">QA</div>
+      </div>
+    </div>
+
+    <!-- DAG placeholder -->
+    <div style="background:var(--card); border:2px dashed var(--border); border-radius:14px; padding:28px 22px; text-align:center; max-width:520px; margin-bottom:12px;">
+      <div style="color:var(--dim); font-size:1rem; font-weight:600;">[Conductor DAG — Live Demo]</div>
+    </div>
+
+    <p style="font-size:0.75rem; color:var(--dim); margin-bottom:6px;">167K tokens · $0.36 · 11 agents</p>
+    <p class="small" style="margin-top:6px; color:var(--dim);">Fixes: Orchestrator Overload</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       ACT 4: THE FULL PICTURE (slides 14-16)
+       ═══════════════════════════════════════════ -->
+
+  <!-- ── SLIDE 14: THE FULL COMPANY ── -->
+  <div class="slide" data-notes="Hero slide. Walk through the DAG. 11 agents, execution down, reporting up, CEO says SHIP. Each node is a real agent invocation.">
+    <div class="tag">The Result</div>
+    <div class="medium" style="margin-top:0; margin-bottom:16px;">11 Agents. One Feature. <span style="color:var(--green);">CEO Says SHIP.</span></div>
+
+    <div style="display:flex; gap:40px; align-items:flex-start; justify-content:center; max-width:900px;">
+      <!-- Execution flow -->
+      <div>
+        <div style="font:600 0.7rem 'Fira Code',monospace; color:var(--cyan); letter-spacing:0.1em; margin-bottom:10px;">▼ EXECUTION</div>
+        <div class="flow" style="flex-direction:column; align-items:flex-start; gap:6px;">
+          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--cyan);display:inline-block;"></span><span style="color:var(--cyan);font-size:0.85rem;font-weight:600;">CEO</span><span style="color:var(--dim);font-size:0.75rem;">→ routes to org</span></div>
+          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--cyan);display:inline-block;"></span><span style="color:var(--cyan);font-size:0.85rem;font-weight:600;">VP Eng</span><span style="color:var(--dim);font-size:0.75rem;">→ tech direction</span></div>
+          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--purple);display:inline-block;"></span><span style="color:var(--purple);font-size:0.85rem;font-weight:600;">TPM</span><span style="color:var(--dim);font-size:0.75rem;">→ research + spec</span></div>
+          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--purple);display:inline-block;"></span><span style="color:var(--purple);font-size:0.85rem;font-weight:600;">Dev Manager</span><span style="color:var(--dim);font-size:0.75rem;">→ splits IC tasks</span></div>
+          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
+          <div style="display:flex;gap:16px;">
+            <div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.8rem;font-weight:600;">IC Backend</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.8rem;font-weight:600;">IC Frontend</span></div>
+          </div>
+          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--orange);display:inline-block;"></span><span style="color:var(--orange);font-size:0.85rem;font-weight:600;">IC QA</span><span style="color:var(--dim);font-size:0.75rem;">→ validates</span></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="text-align:center;">
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:16px;">
+          <div style="font-size:0.75rem; color:var(--dim); margin-bottom:12px;">Conductor DAG — Live Run</div>
+          <div style="padding:24px; border:1px dashed var(--border); border-radius:8px; color:var(--dim); font-size:0.8rem;">[DAG Screenshot]</div>
+        </div>
+        <div class="stats" style="margin-top:0; gap:24px;">
+          <div class="stat"><div class="stat-num" style="color:var(--cyan); font-size:1.8rem;">167K</div><div class="stat-lbl">tokens</div></div>
+          <div class="stat"><div class="stat-num" style="color:var(--purple); font-size:1.8rem;">$0.36</div><div class="stat-lbl">cost</div></div>
+          <div class="stat"><div class="stat-num" style="color:var(--green); font-size:1.8rem;">11</div><div class="stat-lbl">agents</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 16: KEY TAKEAWAYS ── -->
+  <div class="slide" data-notes="Slow down. These are the insights worth remembering. Each one came from a real failure. Let each point land.">
+    <div class="tag">Takeaway</div>
+    <div class="big"><span>Three Rules</span></div>
+
+    <div style="margin-top:40px; display:flex; flex-direction:column; gap:28px; max-width:700px; width:100%;">
+      <div style="display:flex; gap:20px; align-items:center;">
+        <span style="font-size:2rem;">🧠</span>
+        <div>
+          <div style="font-size:1.1rem; font-weight:700;">Context is RAM, not disk</div>
+          <div style="font-size:0.85rem; color:var(--dim); margin-top:2px;">Finite. Precious. Don't overload agents.</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:20px; align-items:center;">
+        <span style="font-size:2rem;">📄</span>
+        <div>
+          <div style="font-size:1.1rem; font-weight:700;">The repo is the shared memory</div>
+          <div style="font-size:0.85rem; color:var(--dim); margin-top:2px;">Agents can't remember. Files can. Docs-as-message-bus.</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:20px; align-items:center;">
+        <span style="font-size:2rem;">⚡</span>
+        <div>
+          <div style="font-size:1.1rem; font-weight:700;">Don't anthropomorphize agents</div>
+          <div style="font-size:0.85rem; color:var(--dim); margin-top:2px;">They're stateless functions with good UX. Design for that.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:48px; max-width:700px; text-align:center; font-size:1.3rem; font-style:italic; color:var(--dim); line-height:1.5;">
+      "Agents are not employees.<br>They're functions that happen to speak English."
+    </div>
+    <p style="margin-top:24px; font-size:0.85rem; color:var(--muted); text-align:center;">Thank you · <span style="color:var(--cyan);">github.com/aviraldua93</span></p>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT — Presentation Engine
+     ═══════════════════════════════════════════ -->
+<script>
+(() => {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const progress = document.querySelector('.progress');
+  const counter  = document.querySelector('.counter');
+  const noteBox  = document.getElementById('speakerNotesContent');
+  const notesPanel = document.getElementById('speakerNotes');
+  const navDots  = document.getElementById('navDots');
+  let cur = 0;
+
+  /* ── Build nav dots ── */
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'nav-dot';
+    d.addEventListener('click', () => go(i));
+    navDots.appendChild(d);
+  });
+
+  /* ── Navigation ── */
+  function go(n) {
+    if (n < 0 || n >= slides.length) return;
+    slides[cur].classList.remove('active');
+    cur = n;
+    slides[cur].classList.add('active');
+    update();
+  }
+
+  function update() {
+    const pct = slides.length > 1 ? (cur / (slides.length - 1)) * 100 : 0;
+    progress.style.width = pct + '%';
+    counter.textContent = (cur + 1) + ' / ' + slides.length;
+    noteBox.textContent = slides[cur].dataset.notes || '';
+    /* dots */
+    Array.from(navDots.children).forEach((d, i) => {
+      d.style.background = i === cur ? 'var(--cyan)' : 'var(--border)';
+      d.style.width = i === cur ? '20px' : '8px';
+    });
+  }
+
+  /* ── Keyboard ── */
+  document.addEventListener('keydown', e => {
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+        e.preventDefault(); go(cur + 1); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+        e.preventDefault(); go(cur - 1); break;
+      case 'Home': e.preventDefault(); go(0); break;
+      case 'End':  e.preventDefault(); go(slides.length - 1); break;
+      case 'n': case 'N':
+        notesPanel.classList.toggle('visible'); break;
+    }
+  });
+
+  /* ── Touch / swipe ── */
+  let tx = 0, ty = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const dx = tx - e.changedTouches[0].clientX;
+    const dy = ty - e.changedTouches[0].clientY;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 50) return;
+    (Math.abs(dy) > Math.abs(dx) ? dy : dx) > 0 ? go(cur + 1) : go(cur - 1);
+  }, { passive: true });
+
+  /* ── Nav bar buttons ── */
+  document.getElementById('navPrev').addEventListener('click', () => go(cur - 1));
+  document.getElementById('navNext').addEventListener('click', () => go(cur + 1));
+
+  /* ── Click-to-reveal ── */
+  document.querySelectorAll('.reveal-trigger').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      const target = document.getElementById(trigger.dataset.reveal);
+      if (target) {
+        target.classList.add('revealed');
+        trigger.classList.add('hidden');
+      }
+    });
+  });
+
+  /* ── Auto-hide nav ── */
+  const navBar = document.getElementById('navBar');
+  let hideTimer;
+  const showNav = () => { navBar.style.opacity = '1'; clearTimeout(hideTimer); hideTimer = setTimeout(() => { navBar.style.opacity = '0.15'; }, 3000); };
+  document.addEventListener('mousemove', showNav);
+  document.addEventListener('keydown', showNav);
+  navBar.addEventListener('mouseenter', () => { clearTimeout(hideTimer); navBar.style.opacity = '1'; });
+  showNav();
+
+  /* ── Init ── */
+  go(0);
+})();
+</script>
+</body>
+</html>

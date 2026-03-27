@@ -1,0 +1,376 @@
+# Company Workflow — AgentOS (v3)
+#
+# Matches the org chart from the presentation:
+#   CEO → [VP Eng, VP Sales, VP Mktg] parallel
+#   VP Eng → [DevMgr 1, DevMgr 2] parallel
+#   DevMgr 1 → [TPM 1, IC Backend, IC Frontend, QA 1] parallel
+#   DevMgr 2 → [TPM 2, IC Infra, QA 2] parallel
+#
+# No reporting chain. Just execution downward.
+
+workflow:
+  name: agentos-org
+  description: Full company org-chart — execution only, no reporting
+  version: "3.0.0"
+  entry_point: ceo
+
+  runtime:
+    provider: copilot
+    default_model: gpt-4.1
+
+  input:
+    mission:
+      type: string
+      required: true
+      description: The feature or mission to build
+
+  context:
+    mode: explicit
+
+  limits:
+    max_iterations: 25
+    timeout_seconds: 900
+
+parallel:
+  - name: vp_team
+    description: VPs receive CEO direction in parallel
+    agents:
+      - vp_engineering
+      - vp_sales
+      - vp_marketing
+    failure_mode: continue_on_error
+    routes:
+      - to: dev_manager_team
+
+  - name: dev_manager_team
+    description: Dev Managers split work under VP Eng
+    agents:
+      - dev_manager_1
+      - dev_manager_2
+    failure_mode: continue_on_error
+    routes:
+      - to: ic_team_1
+
+  - name: ic_team_1
+    description: ICs under DevMgr 1 execute in parallel
+    agents:
+      - tpm_1
+      - ic_backend
+      - ic_frontend
+      - qa_1
+    failure_mode: continue_on_error
+    routes:
+      - to: ic_team_2
+
+  - name: ic_team_2
+    description: ICs under DevMgr 2 execute in parallel
+    agents:
+      - tpm_2
+      - ic_infra
+      - qa_2
+    failure_mode: continue_on_error
+    routes:
+      - to: $end
+
+agents:
+  # ── CEO ──
+  - name: ceo
+    description: Sets strategic context and routes to VPs
+    model: gpt-4.1
+    input:
+      - workflow.input.mission
+    tools: []
+    prompt: |
+      You are Ria Vasquez, CEO of AgentOS.
+      Route this mission. Set strategic context. Do NOT define implementation.
+
+      MISSION: {{ workflow.input.mission }}
+
+      Produce:
+      1. Strategic context (2 sentences)
+      2. What VP Engineering should focus on
+      3. What VP Sales should focus on
+      4. What VP Marketing should focus on
+    output:
+      strategic_context:
+        type: string
+        description: Why this matters
+      vp_eng_focus:
+        type: string
+        description: VP Eng direction
+      vp_sales_focus:
+        type: string
+        description: VP Sales direction
+      vp_mktg_focus:
+        type: string
+        description: VP Marketing direction
+    routes:
+      - to: vp_team
+
+  # ── VP ENGINEERING ──
+  - name: vp_engineering
+    description: Sets technical direction for the engineering org
+    model: gpt-4.1
+    input:
+      - workflow.input.mission
+      - ceo.output
+    tools: []
+    prompt: |
+      You are Kai Nakamura, VP Engineering at AgentOS.
+      Set technical direction. Split guidance for your two Dev Managers.
+
+      CEO CONTEXT: {{ ceo.output.strategic_context }}
+      YOUR FOCUS: {{ ceo.output.vp_eng_focus }}
+
+      You have TWO Dev Managers:
+      - DevMgr 1: owns Platform (API, data models, backend)
+      - DevMgr 2: owns Infrastructure (deployment, monitoring, ops)
+
+      Produce:
+      1. Technical direction (approach, tech stack)
+      2. DevMgr 1 guidance (what to build)
+      3. DevMgr 2 guidance (what to build)
+      4. Shared API contract both teams must follow
+    output:
+      technical_direction:
+        type: string
+        description: Tech approach
+      devmgr1_guidance:
+        type: string
+        description: Platform team guidance
+      devmgr2_guidance:
+        type: string
+        description: Infra team guidance
+      api_contract:
+        type: string
+        description: Shared API contract
+    routes: []
+
+  # ── VP SALES ──
+  - name: vp_sales
+    description: Sales perspective on the feature
+    model: gpt-4.1
+    input:
+      - workflow.input.mission
+      - ceo.output
+    tools: []
+    prompt: |
+      You are VP Sales at AgentOS.
+      YOUR FOCUS: {{ ceo.output.vp_sales_focus }}
+      CONTEXT: {{ ceo.output.strategic_context }}
+
+      Produce: 3 bullet points on how this feature helps sales.
+    output:
+      sales_perspective:
+        type: object
+        description: Sales angle
+    routes: []
+
+  # ── VP MARKETING ──
+  - name: vp_marketing
+    description: Marketing perspective on the feature
+    model: gpt-4.1
+    input:
+      - workflow.input.mission
+      - ceo.output
+    tools: []
+    prompt: |
+      You are VP Marketing at AgentOS.
+      YOUR FOCUS: {{ ceo.output.vp_mktg_focus }}
+      CONTEXT: {{ ceo.output.strategic_context }}
+
+      Produce: 3 bullet points on how to position this feature.
+    output:
+      marketing_perspective:
+        type: object
+        description: Marketing angle
+    routes: []
+
+  # ── DEV MANAGER 1 (Platform) ──
+  - name: dev_manager_1
+    description: Splits platform work for ICs
+    model: gpt-4.1
+    input:
+      - workflow.input.mission
+      - vp_team.outputs
+    tools: []
+    prompt: |
+      You are Dev Manager 1 — Platform team at AgentOS.
+
+      VP ENG DIRECTION: {{ vp_team.outputs.vp_engineering.technical_direction }}
+      YOUR GUIDANCE: {{ vp_team.outputs.vp_engineering.devmgr1_guidance }}
+      API CONTRACT: {{ vp_team.outputs.vp_engineering.api_contract }}
+
+      You have: TPM, IC Backend, IC Frontend, QA.
+      Split the work. Define each person's assignment.
+
+      Produce:
+      1. TPM assignment (what to spec)
+      2. IC Backend assignment (what endpoints to build)
+      3. IC Frontend assignment (what components to build)
+      4. QA assignment (what to test)
+    output:
+      tpm_assignment:
+        type: string
+        description: TPM scope
+      backend_assignment:
+        type: string
+        description: Backend IC scope
+      frontend_assignment:
+        type: string
+        description: Frontend IC scope
+      qa_assignment:
+        type: string
+        description: QA scope
+    routes: []
+
+  # ── DEV MANAGER 2 (Infra) ──
+  - name: dev_manager_2
+    description: Splits infra work for ICs
+    model: gpt-4.1
+    input:
+      - workflow.input.mission
+      - vp_team.outputs
+    tools: []
+    prompt: |
+      You are Dev Manager 2 — Infrastructure team at AgentOS.
+
+      VP ENG DIRECTION: {{ vp_team.outputs.vp_engineering.technical_direction }}
+      YOUR GUIDANCE: {{ vp_team.outputs.vp_engineering.devmgr2_guidance }}
+      API CONTRACT: {{ vp_team.outputs.vp_engineering.api_contract }}
+
+      You have: TPM, IC Infra, QA.
+      Split the work.
+
+      Produce:
+      1. TPM assignment (what to spec for infra)
+      2. IC Infra assignment (deployment, monitoring, ops)
+      3. QA assignment (what to test)
+    output:
+      tpm_assignment:
+        type: string
+        description: TPM scope
+      infra_assignment:
+        type: string
+        description: Infra IC scope
+      qa_assignment:
+        type: string
+        description: QA scope
+    routes: []
+
+  # ── ICs UNDER DEV MANAGER 1 ──
+  - name: tpm_1
+    description: TPM writes feature spec for platform team
+    model: gpt-4.1
+    input:
+      - dev_manager_team.outputs
+    tools: []
+    prompt: |
+      You are TPM on the Platform team.
+      ASSIGNMENT: {{ dev_manager_team.outputs.dev_manager_1.tpm_assignment }}
+      Produce: User story + 5 requirements + acceptance criteria.
+    output:
+      spec:
+        type: object
+        description: Feature spec
+
+  - name: ic_backend
+    description: Implements backend API
+    model: gpt-4.1
+    input:
+      - dev_manager_team.outputs
+      - vp_team.outputs
+    tools: []
+    prompt: |
+      You are IC Backend on the Platform team.
+      ASSIGNMENT: {{ dev_manager_team.outputs.dev_manager_1.backend_assignment }}
+      API CONTRACT: {{ vp_team.outputs.vp_engineering.api_contract }}
+      Produce: File list + key code (real TypeScript). Follow the contract exactly.
+    output:
+      deliverable:
+        type: object
+        description: Backend code
+
+  - name: ic_frontend
+    description: Implements dashboard UI
+    model: gpt-4.1
+    input:
+      - dev_manager_team.outputs
+      - vp_team.outputs
+    tools: []
+    prompt: |
+      You are IC Frontend on the Platform team.
+      ASSIGNMENT: {{ dev_manager_team.outputs.dev_manager_1.frontend_assignment }}
+      API CONTRACT: {{ vp_team.outputs.vp_engineering.api_contract }}
+      Produce: File list + key code (real React/TSX). Follow the contract exactly.
+    output:
+      deliverable:
+        type: object
+        description: Frontend code
+
+  - name: qa_1
+    description: QA for platform team
+    model: gpt-4.1
+    input:
+      - dev_manager_team.outputs
+    tools: []
+    prompt: |
+      You are QA on the Platform team.
+      ASSIGNMENT: {{ dev_manager_team.outputs.dev_manager_1.qa_assignment }}
+      Produce: 5 test cases with expected results.
+    output:
+      test_plan:
+        type: object
+        description: Test cases
+
+  # ── ICs UNDER DEV MANAGER 2 ──
+  - name: tpm_2
+    description: TPM writes infra spec
+    model: gpt-4.1
+    input:
+      - dev_manager_team.outputs
+    tools: []
+    prompt: |
+      You are TPM on the Infrastructure team.
+      ASSIGNMENT: {{ dev_manager_team.outputs.dev_manager_2.tpm_assignment }}
+      Produce: Infrastructure requirements + monitoring spec.
+    output:
+      spec:
+        type: object
+        description: Infra spec
+
+  - name: ic_infra
+    description: Implements infrastructure
+    model: gpt-4.1
+    input:
+      - dev_manager_team.outputs
+    tools: []
+    prompt: |
+      You are IC Infra on the Infrastructure team.
+      ASSIGNMENT: {{ dev_manager_team.outputs.dev_manager_2.infra_assignment }}
+      Produce: Deployment config + monitoring setup (real code).
+    output:
+      deliverable:
+        type: object
+        description: Infra code
+
+  - name: qa_2
+    description: QA for infra team
+    model: gpt-4.1
+    input:
+      - dev_manager_team.outputs
+    tools: []
+    prompt: |
+      You are QA on the Infrastructure team.
+      ASSIGNMENT: {{ dev_manager_team.outputs.dev_manager_2.qa_assignment }}
+      Produce: 3 infra test cases + chaos test scenarios.
+    output:
+      test_plan:
+        type: object
+        description: Infra test cases
+
+output:
+  mission: "{{ workflow.input.mission }}"
+  strategic_context: "{{ ceo.output.strategic_context }}"
+  technical_direction: "{{ vp_team.outputs.vp_engineering.technical_direction }}"
+  api_contract: "{{ vp_team.outputs.vp_engineering.api_contract }}"
