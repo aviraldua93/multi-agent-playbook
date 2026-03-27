@@ -68,7 +68,7 @@
   .big {
     font-size: clamp(2rem, 5vw, 3.8rem);
     font-weight: 700; line-height: 1.1;
-    text-align: center;
+    text-align: center; margin-bottom: 24px;
   }
   .big span, .gradient-text {
     background: linear-gradient(135deg, var(--cyan), var(--blue), var(--purple));
@@ -78,10 +78,10 @@
   .medium {
     font-size: clamp(1.2rem, 2.5vw, 2rem);
     font-weight: 600; text-align: center;
-    line-height: 1.3; margin-top: 32px;
+    line-height: 1.3; margin-top: 32px; margin-bottom: 20px;
   }
   .small {
-    font-size: clamp(0.85rem, 1.3vw, 1.15rem);
+    font-size: clamp(0.9rem, 1.4vw, 1.25rem);
     color: var(--dim); text-align: center;
     max-width: 600px; line-height: 1.6;
   }
@@ -932,8 +932,7 @@
 
   <!-- ── ACT 2 TITLE ── -->
   <div class="slide" data-notes="One story. One feature. Watch everything fall apart.">
-    <div class="tag">Act 2</div>
-    <div class="medium">Where It Broke</div>
+    <div class="big"><span>Where It Broke</span></div>
   </div>
 
   <!-- ── THE PREMISE ── -->
@@ -1178,48 +1177,15 @@
   </div>
 
   <!-- ── SLIDE 7: I'LL DO THE HIRING ── -->
-  <div class="slide" data-notes="I deploy VP myself but forget to pass CEO's output. VP has total amnesia.">
+  <div class="slide" data-notes="I deploy VP myself but don't pass CEO's output. VP has total amnesia. The CEO conversation already happened on the previous slide.">
     <div class="medium" style="margin-top:0; margin-bottom:18px;">Fine, I'll Deploy VP Myself</div>
 
     <div class="comic-strip">
-      <!-- PANEL 1: Me → CEO Ria -->
-      <div class="comic-panel comic-panel--success">
+      <!-- PANEL 1: I deploy VP -->
+      <div class="comic-panel" style="border-color:var(--orange);">
         <div style="display:flex;align-items:center;gap:6px;">
-          <span class="comic-num comic-num--green">1</span>
-          <span class="comic-panel-label">Me → CEO Ria</span>
-        </div>
-        <div class="comic-dialogue">
-          <div class="comic-row">
-            <div class="comic-avatar-wrap">
-              <div class="comic-avatar comic-avatar--cyan">👤</div>
-              <span class="comic-avatar-name">Me</span>
-            </div>
-            <div class="comic-bubble comic-bubble--left">Build an agent dashboard.</div>
-          </div>
-          <div class="comic-row comic-row--reverse">
-            <div class="comic-avatar-wrap">
-              <div class="comic-avatar comic-avatar--blue">👩‍💼</div>
-              <span class="comic-avatar-name comic-avatar-name--blue">CEO Ria</span>
-            </div>
-            <div class="comic-bubble comic-bubble--right">On it. Routing to VP Eng.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PANEL 2: Break — I intervene -->
-      <div class="comic-panel comic-panel--break">
-        <span class="comic-num comic-num--muted">⚡</span>
-        <div class="comic-break-line"></div>
-        <div class="comic-break-icon">💀 → 🔄</div>
-        <div class="comic-break-text">CEO dead. I deploy<br>VP Eng manually.</div>
-        <div class="comic-break-line"></div>
-      </div>
-
-      <!-- PANEL 3: VP has no context -->
-      <div class="comic-panel comic-panel--fail">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span class="comic-num comic-num--red">3</span>
-          <span class="comic-panel-label">Me → VP Eng</span>
+          <span class="comic-num" style="background:rgba(240,136,62,0.15);color:var(--orange);">🔄</span>
+          <span class="comic-panel-label">I deploy VP Eng manually</span>
         </div>
         <div class="comic-dialogue">
           <div class="comic-row">
@@ -1229,12 +1195,30 @@
             </div>
             <div class="comic-bubble comic-bubble--left">CEO planned the dashboard. What's the plan?</div>
           </div>
-          <div class="comic-row comic-row--reverse">
+        </div>
+      </div>
+
+      <!-- PANEL 2: Break -->
+      <div class="comic-panel comic-panel--break">
+        <span class="comic-num comic-num--muted">❌</span>
+        <div class="comic-break-line"></div>
+        <div class="comic-break-text">No CEO output<br>was passed.</div>
+        <div class="comic-break-line"></div>
+      </div>
+
+      <!-- PANEL 3: VP has no context -->
+      <div class="comic-panel comic-panel--fail">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="comic-num comic-num--red">🤷</span>
+          <span class="comic-panel-label">VP Eng responds</span>
+        </div>
+        <div class="comic-dialogue">
+          <div class="comic-row">
             <div class="comic-avatar-wrap">
               <div class="comic-avatar comic-avatar--purple">🤷</div>
               <span class="comic-avatar-name" style="color:var(--purple);">VP Eng</span>
             </div>
-            <div class="comic-bubble comic-bubble--right comic-bubble--error">…what plan?</div>
+            <div class="comic-bubble comic-bubble--left comic-bubble--error">…what plan?</div>
           </div>
         </div>
       </div>
@@ -1269,7 +1253,7 @@
       <div class="comic-panel comic-panel--break">
         <span class="comic-num comic-num--muted">🔇</span>
         <div class="comic-break-line"></div>
-        <div class="comic-break-text" style="color:var(--dim);">No contact.<br>No shared spec.</div>
+        <div class="comic-break-text" style="color:var(--dim);">No contact.<br>No shared contract.</div>
         <div class="comic-break-line"></div>
       </div>
 
@@ -1498,7 +1482,6 @@
 
   <!-- ── SLIDE 11: ACT 3 TITLE ── -->
   <div class="slide" data-notes="Four patterns that each fix a specific failure from Act 2.">
-    <div class="tag">Act 3</div>
     <div class="big"><span>How I Adapted</span></div>
   </div>
 
@@ -1638,19 +1621,35 @@
         </div>
       </div>
       <span style="color:var(--muted); font-size:1.1rem;">↓</span>
-      <!-- Agent chain -->
-      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:center;">
-        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--blue); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">CEO</div>
-        <span style="color:var(--muted); font-size:1.1rem;">→</span>
-        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--purple); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">VP</div>
-        <span style="color:var(--muted); font-size:1.1rem;">→</span>
-        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--cyan); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">TPM</div>
-        <span style="color:var(--muted); font-size:1.1rem;">→</span>
-        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--orange); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">DevM</div>
-        <span style="color:var(--muted); font-size:1.1rem;">→</span>
-        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--green); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">ICs</div>
-        <span style="color:var(--muted); font-size:1.1rem;">→</span>
-        <div style="display:inline-block; padding:6px 14px; border:2px solid var(--green); border-radius:10px; background:var(--card); font-size:0.75rem; font-weight:600;">QA</div>
+      <!-- Org tree (reuse slide 3 pattern, scaled) -->
+      <div class="org-wrapper" style="transform:scale(0.7);transform-origin:top center;">
+        <div class="org-companies">
+          <div class="org-company">
+            <div class="org-tree">
+              <div class="org-node org-node-md org-blue">CEO</div>
+              <div class="org-vline"></div>
+              <div class="org-children">
+                <div class="org-branch">
+                  <div class="org-node org-node-sm org-purple">VP Eng</div>
+                  <div class="org-vline"></div>
+                  <div class="org-children">
+                    <div class="org-branch">
+                      <div class="org-node org-node-sm org-green">DevMgr</div>
+                      <div class="org-vline"></div>
+                      <div class="org-children">
+                        <div class="org-branch"><div class="org-node org-node-sm org-cyan">TPM</div></div>
+                        <div class="org-branch"><div class="org-node org-node-sm org-cyan">IC</div></div>
+                        <div class="org-branch"><div class="org-node org-node-sm org-red">QA</div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="org-branch"><div class="org-node org-node-sm org-purple">VP Sales</div></div>
+                <div class="org-branch"><div class="org-node org-node-sm org-purple">VP Mktg</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1664,50 +1663,8 @@
   </div>
 
   <!-- ═══════════════════════════════════════════
-       ACT 4: THE FULL PICTURE (slides 14-16)
+       ACT 4: THE FULL PICTURE
        ═══════════════════════════════════════════ -->
-
-  <!-- ── SLIDE 14: THE FULL COMPANY ── -->
-  <div class="slide" data-notes="Hero slide. Walk through the DAG. 11 agents, execution down, reporting up, CEO says SHIP. Each node is a real agent invocation.">
-    <div class="tag">The Result</div>
-    <div class="medium" style="margin-top:0; margin-bottom:16px;">11 Agents. One Feature. <span style="color:var(--green);">CEO Says SHIP.</span></div>
-
-    <div style="display:flex; gap:40px; align-items:flex-start; justify-content:center; max-width:900px;">
-      <!-- Execution flow -->
-      <div>
-        <div style="font:600 0.7rem 'Fira Code',monospace; color:var(--cyan); letter-spacing:0.1em; margin-bottom:10px;">▼ EXECUTION</div>
-        <div class="flow" style="flex-direction:column; align-items:flex-start; gap:6px;">
-          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--cyan);display:inline-block;"></span><span style="color:var(--cyan);font-size:0.85rem;font-weight:600;">CEO</span><span style="color:var(--dim);font-size:0.75rem;">→ routes to org</span></div>
-          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--cyan);display:inline-block;"></span><span style="color:var(--cyan);font-size:0.85rem;font-weight:600;">VP Eng</span><span style="color:var(--dim);font-size:0.75rem;">→ tech direction</span></div>
-          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--purple);display:inline-block;"></span><span style="color:var(--purple);font-size:0.85rem;font-weight:600;">TPM</span><span style="color:var(--dim);font-size:0.75rem;">→ research + spec</span></div>
-          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--purple);display:inline-block;"></span><span style="color:var(--purple);font-size:0.85rem;font-weight:600;">Dev Manager</span><span style="color:var(--dim);font-size:0.75rem;">→ splits IC tasks</span></div>
-          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
-          <div style="display:flex;gap:16px;">
-            <div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.8rem;font-weight:600;">IC Backend</span></div>
-            <div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.8rem;font-weight:600;">IC Frontend</span></div>
-          </div>
-          <div style="margin-left:4px;width:1px;height:10px;background:var(--border);"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--orange);display:inline-block;"></span><span style="color:var(--orange);font-size:0.85rem;font-weight:600;">IC QA</span><span style="color:var(--dim);font-size:0.75rem;">→ validates</span></div>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      <div style="text-align:center;">
-        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:16px;">
-          <div style="font-size:0.75rem; color:var(--dim); margin-bottom:12px;">Conductor DAG — Live Run</div>
-          <div style="padding:24px; border:1px dashed var(--border); border-radius:8px; color:var(--dim); font-size:0.8rem;">[DAG Screenshot]</div>
-        </div>
-        <div class="stats" style="margin-top:0; gap:24px;">
-          <div class="stat"><div class="stat-num" style="color:var(--cyan); font-size:1.8rem;">167K</div><div class="stat-lbl">tokens</div></div>
-          <div class="stat"><div class="stat-num" style="color:var(--purple); font-size:1.8rem;">$0.36</div><div class="stat-lbl">cost</div></div>
-          <div class="stat"><div class="stat-num" style="color:var(--green); font-size:1.8rem;">11</div><div class="stat-lbl">agents</div></div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ── WHERE THE INDUSTRY IS HEADING ── -->
   <div class="slide" data-notes="The future: Agent Teams. Teammates message each other directly. Shared task list. Self-coordination. Sub-agents become persistent services. Claude Code has this experimentally. The evolution: one-shot functions → persistent services → autonomous coordination.">

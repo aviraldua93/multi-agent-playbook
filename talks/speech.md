@@ -231,21 +231,27 @@ SHIP. All requirements met. 167K tokens. 36 cents. 11 agents. One feature lifecy
 
 ---
 
-### [SLIDE 22 — Three Rules / Takeaway]
+### [SLIDE 22 — Where the Industry Is Heading]
 
-*Slow down. Let each rule land.*
+So where does this go from here?
 
-Three rules I walked away with.
+*Point to the three cards.*
 
-One — context is RAM, not disk. It's finite. It's precious. Don't overload agents. Split the work.
+Today we have sub-agents — one-shot functions. They run, they die. That's what we've been working with this whole talk.
 
-Two — the repo is the shared memory. Agents can't remember. Files can. Use docs as your message bus.
+But Claude Code just shipped something experimental called Agent Teams. Teammates can message each other directly. They have a shared task list. They self-coordinate. They're not one-shot anymore — they're persistent services with a mailbox.
 
-Three — don't anthropomorphize (todo) agents. They're not employees. They're stateless functions with good UX. Design for that.
+And beyond that? Self-organizing teams. Dynamic spawning. No human orchestrator needed. We're not there yet — but that's the direction.
 
-*Pause.*
+The key insight: sub-agents die because nobody talks to them after the first response. Give them a mailbox, and they persist. Same LLM. Different conversation loop.
 
-Agents are not employees. They're functions that happen to speak English.
+---
+
+### [FINAL SLIDE — Closing Quote]
+
+*Let it sit on screen. Pause. Read it.*
+
+"Agents are not employees. They're functions that happen to speak English."
 
 Thank you.
 
@@ -254,6 +260,6 @@ Thank you.
 ## TIMING GUIDE
 - Act 1 (Slides 1-5): ~2.5 min
 - Act 2 (Slides 6-15): ~4 min
-- Act 3 (Slides 16-21): ~3 min  
-- Takeaway (Slide 22): ~0.5 min
+- Act 3 (Slides 16-21): ~2.5 min
+- Act 4 + Closing (Slides 22-end): ~1 min
 - Total: ~10 min
