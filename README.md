@@ -164,14 +164,14 @@ The orchestrator (main LLM session) IS the mega-agent — it accumulates every s
 
 ## Real-World Comparison
 
-| | Copilot CLI | Conductor | Claude Code Agent Teams |
-|---|---|---|---|
-| Orchestrator | LLM (non-deterministic) | Python (deterministic) | Lead agent (LLM) |
-| Can adapt? | Yes | No (fixed YAML) | Yes |
-| Context limit? | Yes — degrades | No — stateless | Yes, but distributed |
-| Agents visible? | Sub-agents invisible | All visible on DAG | All visible |
-| Peer communication? | No | No | Yes (mailbox) |
-| Dynamic spawning? | Yes (main session only) | No | Yes (lead spawns) |
+| | Copilot CLI | GitHub Copilot Coding Agent | Conductor | Claude Code Agent Teams |
+|---|---|---|---|---|
+| Orchestrator | LLM (non-deterministic) | LLM (non-deterministic) | Python (deterministic) | Lead agent (LLM) |
+| Can adapt? | Yes | Yes | No (fixed YAML) | Yes |
+| Context limit? | Yes — degrades | Yes — degrades | No — stateless | Yes, but distributed |
+| Agents visible? | Sub-agents invisible | Sub-agents invisible | All visible on DAG | All visible |
+| Peer communication? | No | No | No | Yes (mailbox) |
+| Dynamic spawning? | Yes (main session only) | Yes (main session only) | No | Yes (lead spawns) |
 
 ---
 
@@ -257,6 +257,7 @@ multi-agent-playbook/
 ## Tools Used
 
 - **[GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli)** — Terminal-based multi-agent with sub-agents
+- **[GitHub Copilot Coding Agent](https://docs.github.com/en/copilot)** — VS Code / terminal agent with task tool for sub-agents (explore, general-purpose, code-review, task agents)
 - **[Microsoft Conductor](https://github.com/microsoft/conductor)** — YAML-based deterministic multi-agent workflows
 - **[Mission Control](https://github.com/builderz-labs/mission-control)** — Agent fleet management dashboard
 - **[Claude Code](https://code.claude.com)** — Agent Teams for peer-to-peer coordination
