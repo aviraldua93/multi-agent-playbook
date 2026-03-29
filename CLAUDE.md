@@ -13,6 +13,7 @@ This repo contains operational patterns for multi-agent AI. When working on mult
 2. **Shared Contracts**: When deploying parallel agents, define the API contract first. Both agents read the same spec. They never talk directly.
 3. **Two-Step (SCOPE → EXECUTE)**: Never give one agent more than 3 deliverables. Step 1: deploy a manager to split the work. Step 2: deploy ICs in parallel with focused scope.
 4. **Deterministic Orchestration**: For workflows with >5 agents, use Conductor (YAML-based) instead of LLM orchestration. The orchestrator doesn't need to be smart — it just needs to route.
+5. **Orchestrator Self-Governance**: The orchestrator (main LLM session) is the hidden mega-agent. It MUST: (a) tell agents where to write output, (b) read summaries not full outputs, (c) pass file paths to downstream agents instead of forwarding content, (d) track its own context budget.
 
 ## Anti-Patterns (Never Do)
 - ❌ **Mega-agent**: One agent with 10 tasks → context rot, quality collapse

@@ -145,6 +145,21 @@ agents:
       - ceo.output  # context passed explicitly in YAML
 ```
 
+### Pattern 5: Orchestrator Self-Governance
+
+**Fixes:** The orchestrator being the invisible mega-agent
+
+The orchestrator (main LLM session) IS the mega-agent — it accumulates every sub-agent result. Three rules to prevent it from drowning:
+
+1. **Never absorb full output.** Tell agents where to write (`docs/findings.md`). Read 1-2 sentence summaries, not the full content. Pass file paths to the next wave.
+2. **Declare the bus upfront.** Before deploying a wave, write a manifest: who writes where, who reads what.
+3. **Budget your context.** Track accumulated tokens. If approaching 50K, checkpoint and summarize.
+
+```
+❌ deploy Agent A → read 5K tokens of output → forward to Agent B
+✅ deploy Agent A → "write to docs/research.md" → deploy Agent B → "read docs/research.md"
+```
+
 ---
 
 ## Real-World Comparison
@@ -223,7 +238,8 @@ multi-agent-playbook/
 │   ├── docs-as-bus.md
 │   ├── shared-contracts.md
 │   ├── two-step-pattern.md
-│   └── deterministic-orchestration.md
+│   ├── deterministic-orchestration.md
+│   └── orchestrator-self-governance.md
 ├── experiments/           ← Documented experiments
 │   ├── amnesia-test.md
 │   ├── mega-agent-trap.md
